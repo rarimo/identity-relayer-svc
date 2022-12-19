@@ -1,0 +1,44 @@
+log:
+  disable_sentry: true
+
+listener:
+  addr: :8000
+
+cop:
+  disabled: true
+  endpoint: "http://..."
+  upstream: "http://..."
+  service_name: relayer-svc
+  service_port: 80
+
+redis:
+  addr: localhost:6379
+
+core:
+  addr: tcp://127.0.0.1:26657
+
+cosmos:
+  addr: 127.0.0.1:9090
+
+evm:
+  chains:
+    - name: "Goerli"
+      bridge_address: "0x5A18Bf59748818CF47a1B709b65Dbbd4dA51Ba57"
+      submitter_private_key: "2985033f9d4120e351d087b97257ea7eeeec58c729f59f49c3d73c536f0a50bb"
+      rpc: https://goerli.infura.io/v3/2a6a01d5162c45939a09d96bea88d358
+
+solana:
+  rpc: "https://api.devnet.solana.com"
+  ws: "wss://api.devnet.solana.com"
+  bridge_program_id: "GexDbBi7B2UrJDi9JkrWH9fFVhmysN7u5C9zT2HkC6yZ"
+  bridge_admin_seed: "BhBxfhsg2CrckxRKqHJXykLVTSD5LLF8nqNyzXD9idY"
+  submitter_private_key: "4kaCgatohjE7RtkqiPW41Q9Y6CSLZft32Z5ubG5rjWgD2qp9gAmXXQTdMLRM6FT2M7Hc6SeCifd3ShkMw1uwyLnm"
+
+near:
+  rpc: "https://rpc.testnet.near.org"
+  bridge_address: "bridge.napalmpapalam.testnet"
+  submitter_address: "napalmpapalam.testnet"
+  submitter_private_key: "ed25519:uXN1kpbT4jWdnbdsBmh9tu15ARXzdYsYLViqdda3NaT8eHKE9y8tqRd3Hi2jU1HHXK3a91aoBR1PBTsaMFRgAbe"
+
+
+

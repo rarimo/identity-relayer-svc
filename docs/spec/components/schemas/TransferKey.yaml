@@ -1,0 +1,12 @@
+type: object
+required:
+  - id
+  - type
+properties:
+  id:
+    type: string
+    description: Transfer ID in rarimo-core.
+    example: "0xf784665de11c899238b9db0a80b2b03f27dd59477ddd474c09fcec2b5bd118a8"
+  type:
+    type: string
+    enum: [transfers]

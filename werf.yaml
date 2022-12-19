@@ -1,0 +1,43 @@
+configVersion: 1
+project: "backend"
+---
+image: builder
+from: golang:1.19-alpine
+docker:
+  WORKDIR: /go/src/gitlab.com/rarify-protocol/relayer-svc
+git:
+  - add: /
+    to: /go/src/gitlab.com/rarify-protocol/relayer-svc
+    stageDependencies:
+      install:
+        - go.mod
+        - go.sum
+      setup:
+        - "**/*"
+shell:
+  install:
+    - apk add git build-base
+    - git config --global url."https://gitlab-ci-token:{{ env "CI_JOB_TOKEN" }}@gitlab.com/".insteadOf https://gitlab.com/
+    - go env -w GOPRIVATE=gitlab.com/*
+    - cd /go/src/gitlab.com/rarify-protocol/relayer-svc
+    - go mod tidy
+    - go mod vendor
+  setup:
+    - export CGO_ENABLED=1
+    - export GO111MODULE=off
+    - export GOOS=linux
+    - go build  -o /usr/local/bin/relayer-svc /go/src/gitlab.com/rarify-protocol/relayer-svc
+
+---
+image: service
+from: alpine:3.14.6
+docker:
+  ENTRYPOINT: relayer-svc
+shell:
+  setup:
+    - apk add --no-cache ca-certificates
+import:
+  - image: builder
+    add: /usr/local/bin/relayer-svc
+    to: /usr/local/bin/relayer-svc
+    after: setup
