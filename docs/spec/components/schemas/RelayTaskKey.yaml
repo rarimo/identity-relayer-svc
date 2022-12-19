@@ -1,0 +1,12 @@
+type: object
+required:
+  - id
+  - type
+properties:
+  id:
+    type: string
+    example: "0xf410c974e8095a87b305464a8cfff0261a7d5a8f020dd801cccbaf9246e07cf1:1670981811"
+  type:
+    type: string
+    enum: [relay_tasks]
+

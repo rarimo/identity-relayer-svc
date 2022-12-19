@@ -1,0 +1,29 @@
+allOf:
+  - $ref: '#/components/schemas/RelayTaskKey'
+  - type: object
+    required:
+      - relationships
+      - attributes
+    properties:
+      attributes:
+        type: object
+      relationships:
+        type: object
+        required:
+          - transfer
+          - confirmation
+        properties:
+          transfer:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                $ref: '#/components/schemas/TransferKey'
+          confirmation:
+            type: object
+            required:
+              - data
+            properties:
+              data:
+                $ref: '#/components/schemas/ConfirmationKey'

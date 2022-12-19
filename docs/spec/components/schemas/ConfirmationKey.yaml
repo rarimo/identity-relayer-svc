@@ -1,0 +1,13 @@
+type: object
+required:
+  - id
+  - type
+properties:
+  id:
+    type: string
+    description: Confirmation ID in rarimo-core.
+    example: "0xf410c974e8095a87b305464a8cfff0261a7d5a8f020dd801cccbaf9246e07cf1"
+  type:
+    type: string
+    enum: [confirmations]
+

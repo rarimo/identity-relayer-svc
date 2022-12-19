@@ -1,0 +1,250 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "relayer-svc",
+    "description": ""
+  },
+  "servers": [
+    {
+      "url": "https://api.demo.tokend.io",
+      "description": "TokenD Developer Environment"
+    }
+  ],
+  "paths": {
+    "/relayer/relay_tasks": {
+      "post": {
+        "tags": [
+          "Backoffice"
+        ],
+        "summary": "Manually schedules transfers for relay",
+        "operationId": "scheduleTransferForRelay",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "data"
+                ],
+                "properties": {
+                  "data": {
+                    "$ref": "#/components/schemas/RelayTask"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Submitted for processing."
+          },
+          "400": {
+            "$ref": "#/components/responses/invalidParameter"
+          },
+          "401": {
+            "$ref": "#/components/responses/invalidAuth"
+          },
+          "500": {
+            "$ref": "#/components/responses/internalError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ConfirmationKey": {
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Confirmation ID in rarimo-core.",
+            "example": "0xf410c974e8095a87b305464a8cfff0261a7d5a8f020dd801cccbaf9246e07cf1"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "confirmations"
+            ]
+          }
+        }
+      },
+      "Errors": {
+        "description": "Standard JSON:API error",
+        "type": "object",
+        "required": [
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "description": "Non empty array of errors occurred during request processing",
+            "items": {
+              "type": "object",
+              "required": [
+                "title",
+                "status"
+              ],
+              "properties": {
+                "title": {
+                  "type": "string",
+                  "description": "Title is a short, human-readable summary of the problem",
+                  "example": "Bad Request"
+                },
+                "detail": {
+                  "type": "string",
+                  "description": "Detail is a human-readable explanation specific to this occurrence of the problem",
+                  "example": "Request body was expected"
+                },
+                "status": {
+                  "type": "integer",
+                  "description": "Status is the HTTP status code applicable to this problem",
+                  "example": 400,
+                  "enum": [
+                    400,
+                    401,
+                    403,
+                    404,
+                    409,
+                    500
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "RelayTask": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/RelayTaskKey"
+          },
+          {
+            "type": "object",
+            "required": [
+              "relationships",
+              "attributes"
+            ],
+            "properties": {
+              "attributes": {
+                "type": "object"
+              },
+              "relationships": {
+                "type": "object",
+                "required": [
+                  "transfer",
+                  "confirmation"
+                ],
+                "properties": {
+                  "transfer": {
+                    "type": "object",
+                    "required": [
+                      "data"
+                    ],
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/TransferKey"
+                      }
+                    }
+                  },
+                  "confirmation": {
+                    "type": "object",
+                    "required": [
+                      "data"
+                    ],
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/ConfirmationKey"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "RelayTasksKey": {
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "0xf410c974e8095a87b305464a8cfff0261a7d5a8f020dd801cccbaf9246e07cf1:1670981811"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "relay_tasks"
+            ]
+          }
+        }
+      },
+      "TransferKey": {
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Transfer ID in rarimo-core.",
+            "example": "0xf784665de11c899238b9db0a80b2b03f27dd59477ddd474c09fcec2b5bd118a8"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "transfers"
+            ]
+          }
+        }
+      }
+    },
+    "responses": {
+      "internalError": {
+        "description": "Internal server error",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Errors"
+            }
+          }
+        }
+      },
+      "invalidAuth": {
+        "description": "You must provide a valid authorization header.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Errors"
+            }
+          }
+        }
+      },
+      "invalidParameter": {
+        "description": "One of the parameters is invalid. Refer to the response body for details.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/Errors"
+            }
+          }
+        }
+      },
+      "notFound": {
+        "description": "Requested resource does not exist."
+      }
+    },
+    "parameters": {}
+  }
+}
