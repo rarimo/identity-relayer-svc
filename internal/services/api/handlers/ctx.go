@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"gitlab.com/distributed_lab/logan/v3"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/config"
+	"gitlab.com/rarimo/relayer-svc/internal/config"
 )
 
 type ctxKey int

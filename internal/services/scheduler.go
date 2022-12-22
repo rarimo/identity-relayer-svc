@@ -12,18 +12,18 @@ import (
 	"github.com/tendermint/tendermint/rpc/client/http"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarify-protocol/rarimo-core/x/rarimocore/crypto/operation"
+	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/operation"
 	"golang.org/x/exp/slices"
 
-	"gitlab.com/rarify-protocol/rarimo-core/x/rarimocore/crypto/pkg"
+	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/pkg"
 
-	merkle "gitlab.com/rarify-protocol/go-merkle"
+	merkle "gitlab.com/rarimo/go-merkle"
 
-	rarimocore "gitlab.com/rarify-protocol/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarify-protocol/rarimo-core/x/tokenmanager/types"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/config"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/data"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/services/relayer"
+	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
+	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
+	"gitlab.com/rarimo/relayer-svc/internal/config"
+	"gitlab.com/rarimo/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/services/relayer"
 )
 
 const (

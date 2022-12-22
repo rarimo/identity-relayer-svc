@@ -9,11 +9,11 @@ import (
 
 	"gitlab.com/distributed_lab/ape"
 	"gitlab.com/distributed_lab/ape/problems"
-	rarimocore "gitlab.com/rarify-protocol/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarify-protocol/rarimo-core/x/tokenmanager/types"
+	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
+	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 
-	"gitlab.com/rarify-protocol/relayer-svc/internal/services"
-	"gitlab.com/rarify-protocol/relayer-svc/resources"
+	"gitlab.com/rarimo/relayer-svc/internal/services"
+	"gitlab.com/rarimo/relayer-svc/resources"
 )
 
 type postRelayTask struct {

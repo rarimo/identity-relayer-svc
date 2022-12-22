@@ -5,7 +5,7 @@ import (
 	"net"
 	"time"
 
-	"gitlab.com/rarify-protocol/relayer-svc/internal/config"
+	"gitlab.com/rarimo/relayer-svc/internal/config"
 
 	"gitlab.com/distributed_lab/ape"
 	"gitlab.com/distributed_lab/kit/copus/types"

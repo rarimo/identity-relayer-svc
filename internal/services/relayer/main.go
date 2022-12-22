@@ -9,11 +9,11 @@ import (
 
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	rarimocore "gitlab.com/rarify-protocol/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarify-protocol/rarimo-core/x/tokenmanager/types"
+	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
+	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 
-	"gitlab.com/rarify-protocol/relayer-svc/internal/config"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/config"
+	"gitlab.com/rarimo/relayer-svc/internal/data"
 )
 
 const (

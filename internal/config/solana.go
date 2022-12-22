@@ -11,7 +11,7 @@ import (
 	"gitlab.com/distributed_lab/kit/comfig"
 	"gitlab.com/distributed_lab/kit/kv"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/helpers"
+	"gitlab.com/rarimo/relayer-svc/internal/helpers"
 )
 
 type Solaner interface {

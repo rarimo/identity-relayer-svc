@@ -6,13 +6,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarify-protocol/near-bridge-go/pkg/client"
-	"gitlab.com/rarify-protocol/near-bridge-go/pkg/types"
-	"gitlab.com/rarify-protocol/near-bridge-go/pkg/types/action"
-	"gitlab.com/rarify-protocol/near-bridge-go/pkg/types/action/base"
-	rarimocore "gitlab.com/rarify-protocol/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarify-protocol/rarimo-core/x/tokenmanager/types"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/data"
+	"gitlab.com/rarimo/near-bridge-go/pkg/client"
+	"gitlab.com/rarimo/near-bridge-go/pkg/types"
+	"gitlab.com/rarimo/near-bridge-go/pkg/types/action"
+	"gitlab.com/rarimo/near-bridge-go/pkg/types/action/base"
+	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
+	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
+	"gitlab.com/rarimo/relayer-svc/internal/data"
 	"lukechampine.com/uint128"
 )
 

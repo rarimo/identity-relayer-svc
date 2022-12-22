@@ -11,12 +11,12 @@ import (
 	confirm "github.com/olegfomenko/solana-go/rpc/sendAndConfirmTransaction"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 
-	rarimocore "gitlab.com/rarify-protocol/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarify-protocol/rarimo-core/x/tokenmanager/types"
+	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
+	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 
-	"gitlab.com/rarify-protocol/relayer-svc/internal/data"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/helpers"
-	"gitlab.com/rarify-protocol/solana-program-go/contract"
+	"gitlab.com/rarimo/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/helpers"
+	"gitlab.com/rarimo/solana-program-go/contract"
 )
 
 func (c *relayerConsumer) processSolanaTransfer(

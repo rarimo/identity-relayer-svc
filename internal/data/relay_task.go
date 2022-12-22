@@ -5,7 +5,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/helpers"
+	"gitlab.com/rarimo/relayer-svc/internal/helpers"
 )
 
 type RelayTask struct {

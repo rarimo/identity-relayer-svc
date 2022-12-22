@@ -12,12 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	evmbind "gitlab.com/rarify-protocol/evm-bridge/gobind"
-	rarimocore "gitlab.com/rarify-protocol/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarify-protocol/rarimo-core/x/tokenmanager/types"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/config"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/data"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/helpers"
+	evmbind "gitlab.com/rarimo/evm-bridge/gobind"
+	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
+	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
+	"gitlab.com/rarimo/relayer-svc/internal/config"
+	"gitlab.com/rarimo/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/helpers"
 )
 
 var bytes32SliceType = mustABIType("bytes32[]")

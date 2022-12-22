@@ -7,11 +7,11 @@ import (
 	"sync"
 	"syscall"
 
-	"gitlab.com/rarify-protocol/relayer-svc/internal/services"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/services/api"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/services/relayer"
+	"gitlab.com/rarimo/relayer-svc/internal/services"
+	"gitlab.com/rarimo/relayer-svc/internal/services/api"
+	"gitlab.com/rarimo/relayer-svc/internal/services/relayer"
 
-	"gitlab.com/rarify-protocol/relayer-svc/internal/config"
+	"gitlab.com/rarimo/relayer-svc/internal/config"
 
 	"github.com/alecthomas/kingpin"
 	"gitlab.com/distributed_lab/kit/kv"

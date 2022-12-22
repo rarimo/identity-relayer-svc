@@ -1,7 +1,7 @@
 package api
 
 import (
-	"gitlab.com/rarify-protocol/relayer-svc/internal/services/api/handlers"
+	"gitlab.com/rarimo/relayer-svc/internal/services/api/handlers"
 
 	"github.com/go-chi/chi"
 	"gitlab.com/distributed_lab/ape"

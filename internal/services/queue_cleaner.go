@@ -7,8 +7,8 @@ import (
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	"gitlab.com/distributed_lab/running"
-	"gitlab.com/rarify-protocol/relayer-svc/internal/config"
-	rediser "gitlab.com/rarify-protocol/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/config"
+	rediser "gitlab.com/rarimo/relayer-svc/internal/data"
 )
 
 type queueCleaner struct {

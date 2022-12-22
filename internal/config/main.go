@@ -5,7 +5,7 @@ import (
 	"gitlab.com/distributed_lab/kit/copus"
 	"gitlab.com/distributed_lab/kit/copus/types"
 	"gitlab.com/distributed_lab/kit/kv"
-	rediser "gitlab.com/rarify-protocol/relayer-svc/internal/data"
+	rediser "gitlab.com/rarimo/relayer-svc/internal/data"
 )
 
 type Config interface {

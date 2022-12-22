@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"gitlab.com/rarify-protocol/relayer-svc/internal/cli"
+	"gitlab.com/rarimo/relayer-svc/internal/cli"
 )
 
 func main() {
