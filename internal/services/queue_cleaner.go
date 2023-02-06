@@ -8,12 +8,12 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	"gitlab.com/distributed_lab/running"
 	"gitlab.com/rarimo/relayer-svc/internal/config"
-	rediser "gitlab.com/rarimo/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/data/redis"
 )
 
 type queueCleaner struct {
 	log   *logan.Entry
-	redis rediser.Rediser
+	redis redis.Rediser
 }
 
 func RunQueueCleaner(cfg config.Config, ctx context.Context) {

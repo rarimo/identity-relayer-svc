@@ -9,8 +9,6 @@ import (
 
 	"gitlab.com/distributed_lab/ape"
 	"gitlab.com/distributed_lab/ape/problems"
-	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 
 	"gitlab.com/rarimo/relayer-svc/internal/services"
 	"gitlab.com/rarimo/relayer-svc/resources"
@@ -48,29 +46,8 @@ func PostRelayTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tm := tokenmanager.NewQueryClient(Config(r).Cosmos())
-	core := rarimocore.NewQueryClient(Config(r).Cosmos())
-
-	networks, err := tm.Params(r.Context(), new(tokenmanager.QueryParamsRequest))
-	if err != nil {
-		panic(errors.Wrap(err, "error getting network info"))
-	}
-
-	confirmation, err := core.Confirmation(r.Context(), &rarimocore.QueryGetConfirmationRequest{
-		Root: request.ConfirmationID,
-	})
-
-	if err != nil {
-		panic(errors.Wrap(err, "failed to fetch the confirmation"))
-	}
-	if confirmation == nil {
-		ape.RenderErr(w, problems.NotFound())
-		Log(r).WithField("confirmation_id", request.ConfirmationID).Error("confirmation not found")
-		return
-	}
-
 	scheduler := services.NewScheduler(Config(r))
-	if err := scheduler.ScheduleRelays(r.Context(), networks, confirmation.Confirmation, []string{request.TransferID}); err != nil {
+	if err := scheduler.ScheduleRelays(r.Context(), request.ConfirmationID, []string{request.TransferID}); err != nil {
 		panic(errors.Wrap(err, "failed to schedule the transfers for relay"))
 	}
 

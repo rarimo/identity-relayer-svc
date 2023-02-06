@@ -161,7 +161,7 @@ func (c *relayerConsumer) processEVMTransfer(
 			)
 		}
 	default:
-		return errors.Errorf("token type %d is not supported")
+		return errors.Errorf("token type %d is not supported", tokenDetails.TokenType)
 	}
 
 	tx, err := call()

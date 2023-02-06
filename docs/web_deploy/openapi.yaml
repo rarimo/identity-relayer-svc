@@ -32,6 +32,40 @@ paths:
           $ref: '#/components/responses/invalidAuth'
         '500':
           $ref: '#/components/responses/internalError'
+  /relayer/v1/fee_estimates:
+    post:
+      summary: Estimates the fee for relay of the given transfer
+      operationId: getFeeEstimate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - data
+              properties:
+                data:
+                  $ref: '#/components/schemas/FeeEstimateRequest'
+      responses:
+        '200':
+          description: Estimated relay fee.
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+                required:
+                  - data
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FeeEstimate'
+        '400':
+          $ref: '#/components/responses/invalidParameter'
+        '404':
+          $ref: '#/components/responses/notFound'
+        '409':
+          description: Transfer was already withdrawn on the target
+        '500':
+          $ref: '#/components/responses/internalError'
 components:
   schemas:
     ConfirmationKey:
@@ -82,6 +116,98 @@ components:
                   - 404
                   - 409
                   - 500
+    FeeEstimate:
+      allOf:
+        - $ref: '#/components/schemas/FeeEstimateKey'
+        - type: object
+          required:
+            - relationships
+            - attributes
+          properties:
+            attributes:
+              type: object
+              required:
+                - from_chain
+                - to_chain
+                - gas_estimate
+                - gas_token
+                - fee_amount
+                - fee_token
+                - fee_token_address
+                - created_at
+                - expires_at
+              properties:
+                from_chain:
+                  type: string
+                  example: Goerli
+                to_chain:
+                  type: string
+                  example: Sepolia
+                gas_estimate:
+                  type: string
+                  example: '0xFFFF'
+                gas_token:
+                  type: string
+                  example: ETH
+                fee_amount:
+                  type: string
+                  example: '0xA2FF'
+                fee_token:
+                  type: string
+                  example: RMO
+                fee_token_address:
+                  type: string
+                  example: '0xB216d5e19e0c424F38675e6a093d38d49d773a2A'
+                created_at:
+                  type: string
+                  format: time.Time
+                  example: '2022-11-02T12:00:44Z'
+                expires_at:
+                  type: string
+                  format: time.Time
+                  example: '2022-11-02T12:30:44Z'
+            relationships:
+              type: object
+              required:
+                - transfer
+                - confirmation
+              properties:
+                transfer:
+                  $ref: '#/components/schemas/TransferKey'
+                confirmation:
+                  $ref: '#/components/schemas/ConfirmationKey'
+    FeeEstimateKey:
+      type: object
+      required:
+        - type
+      properties:
+        id:
+          type: string
+          example: '0xf410c974e8095a87b305464a8cfff0261a7d5a8f020dd801cccbaf9246e07cf1:1670031222'
+        type:
+          type: string
+          enum:
+            - fee_estimates
+    FeeEstimateRequest:
+      allOf:
+        - $ref: '#/components/schemas/FeeEstimateKey'
+        - type: object
+          required:
+            - relationships
+            - attributes
+          properties:
+            attributes:
+              type: object
+            relationships:
+              type: object
+              required:
+                - transfer
+                - confirmation
+              properties:
+                transfer:
+                  $ref: '#/components/schemas/TransferKey'
+                confirmation:
+                  $ref: '#/components/schemas/ConfirmationKey'
     RelayTask:
       allOf:
         - $ref: '#/components/schemas/RelayTaskKey'
@@ -112,7 +238,7 @@ components:
                   properties:
                     data:
                       $ref: '#/components/schemas/ConfirmationKey'
-    RelayTasksKey:
+    RelayTaskKey:
       type: object
       required:
         - id

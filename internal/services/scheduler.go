@@ -2,27 +2,21 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/adjust/rmq/v5"
 	client "github.com/cosmos/cosmos-sdk/types/tx"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/tendermint/tendermint/rpc/client/http"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/operation"
+	"gitlab.com/distributed_lab/running"
 	"golang.org/x/exp/slices"
-
-	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/pkg"
-
-	merkle "gitlab.com/rarimo/go-merkle"
 
 	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
 	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 	"gitlab.com/rarimo/relayer-svc/internal/config"
 	"gitlab.com/rarimo/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/data/core"
 	"gitlab.com/rarimo/relayer-svc/internal/services/relayer"
 )
 
@@ -33,8 +27,7 @@ const (
 type Scheduler interface {
 	ScheduleRelays(
 		ctx context.Context,
-		networks *tokenmanager.QueryParamsResponse,
-		confirmation rarimocore.Confirmation,
+		confirmationID string,
 		transferIndexes []string,
 	) error
 }
@@ -43,6 +36,7 @@ type scheduler struct {
 	client       *http.HTTP
 	log          *logan.Entry
 	cosmos       client.ServiceClient
+	core         core.Core
 	tokenmanager tokenmanager.QueryClient
 	rarimocore   rarimocore.QueryClient
 	relayQueue   rmq.Queue
@@ -60,12 +54,16 @@ func newScheduler(cfg config.Config) *scheduler {
 		tokenmanager: tokenmanager.NewQueryClient(cfg.Cosmos()),
 		rarimocore:   rarimocore.NewQueryClient(cfg.Cosmos()),
 		relayQueue:   cfg.Redis().OpenRelayQueue(),
+		core:         core.NewCore(cfg),
 	}
 }
 
 func RunScheduler(cfg config.Config, ctx context.Context) {
 	s := newScheduler(cfg)
-	s.run(ctx)
+	running.WithBackOff(
+		ctx, s.log, "scheduler", s.run,
+		5*time.Second, 5*time.Second, 5*time.Second,
+	)
 }
 
 func (s *scheduler) run(ctx context.Context) error {
@@ -92,11 +90,6 @@ func (s *scheduler) run(ctx context.Context) error {
 				s.log.WithError(err).Error("error fetching tx by hash")
 				continue
 			}
-			networks, err := s.tokenmanager.Params(ctx, new(tokenmanager.QueryParamsRequest))
-			if err != nil {
-				s.log.WithError(err).Error("error getting network info")
-				continue
-			}
 
 			for _, message := range tx.Tx.Body.Messages {
 				if message.TypeUrl != "/rarifyprotocol.rarimocore.rarimocore.MsgCreateConfirmation" {
@@ -108,14 +101,8 @@ func (s *scheduler) run(ctx context.Context) error {
 					s.log.WithError(err).Error("failed to unmarshal message")
 					continue
 				}
-				confirmation := rarimocore.Confirmation{
-					Root:           msg.Root,
-					SignatureECDSA: msg.SignatureECDSA,
-					Indexes:        msg.Indexes,
-					Creator:        msg.Creator,
-				}
 
-				if err := s.ScheduleRelays(ctx, networks, confirmation, msg.Indexes); err != nil {
+				if err := s.ScheduleRelays(ctx, msg.Root, msg.Indexes); err != nil {
 					s.log.WithError(err).Error("failed to schedule")
 				}
 			}
@@ -125,62 +112,23 @@ func (s *scheduler) run(ctx context.Context) error {
 
 func (s *scheduler) ScheduleRelays(
 	ctx context.Context,
-	networks *tokenmanager.QueryParamsResponse,
-	confirmation rarimocore.Confirmation,
+	confirmationID string,
 	transferIndexes []string,
 ) error {
-	log := s.log.WithField("merkle_root", confirmation.Root)
+	log := s.log.WithField("merkle_root", confirmationID)
 	log.Info("processing a confirmation")
 
-	tasks := []data.RelayTask{}
-	operations := []*operation.TransferContent{}
-	contents := []merkle.Content{}
-
-	for _, id := range confirmation.Indexes {
-		operation, err := s.rarimocore.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: id})
-		if err != nil {
-			log.WithError(err).Error("error getting operation entry")
-			continue
-		}
-		transfer := rarimocore.Transfer{}
-		if err := transfer.Unmarshal(operation.Operation.Details.Value); err != nil {
-			log.WithError(err).Error("failed to unmarshal  transfer")
-			continue
-		}
-
-		content, err := s.hashTransfer(ctx, transfer, networks.Params.Networks)
-		if err != nil {
-			log.WithError(err).Error("failed to hash content of transfer")
-			continue
-		}
-		contents = append(contents, content)
-		operations = append(operations, content)
-
-		tasks = append(tasks, data.RelayTask{
-			OperationIndex: id,
-			Signature:      confirmation.SignatureECDSA,
-			Origin:         hexutil.Encode(content.Origin[:]),
-			RetriesLeft:    relayer.MaxRetries,
-		})
+	transfers, err := s.core.GetTransfers(ctx, confirmationID)
+	if err != nil {
+		return errors.Wrap(err, "failed to get transfers")
 	}
 
-	tree := merkle.NewTree(crypto.Keccak256, contents...)
-	for i, operation := range operations {
-		rawPath, ok := tree.Path(operation)
-		if !ok {
-			panic(fmt.Errorf("failed to build Merkle tree"))
+	tasks := []data.RelayTask{}
+	for _, transfer := range transfers {
+		if !slices.Contains(transferIndexes, transfer.Transfer.Origin) {
+			continue
 		}
-		tasks[i].MerklePath = make([]string, 0, len(rawPath))
-		for _, hash := range rawPath {
-			tasks[i].MerklePath = append(tasks[i].MerklePath, hexutil.Encode(hash))
-		}
-
-		log.
-			WithFields(logan.F{
-				"op_index": tasks[i].OperationIndex,
-				"op_hash":  operation.CalculateHash(),
-			}).
-			Infof("scheduling relay to %s", operation.TargetNetwork)
+		tasks = append(tasks, data.NewRelayTask(transfer, relayer.MaxRetries))
 	}
 
 	rawTasks := [][]byte{}
@@ -198,26 +146,4 @@ func (s *scheduler) ScheduleRelays(
 
 	return nil
 
-}
-
-func (s *scheduler) hashTransfer(
-	ctx context.Context,
-	transfer rarimocore.Transfer,
-	networks map[string]*tokenmanager.ChainParams,
-) (*operation.TransferContent, error) {
-	infoResp, err := s.tokenmanager.Info(ctx, &tokenmanager.QueryGetInfoRequest{Index: transfer.TokenIndex})
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting token info entry")
-	}
-
-	itemResp, err := s.tokenmanager.Item(ctx, &tokenmanager.QueryGetItemRequest{
-		TokenAddress: infoResp.Info.Chains[transfer.ToChain].TokenAddress,
-		TokenId:      infoResp.Info.Chains[transfer.ToChain].TokenId,
-		Chain:        transfer.ToChain,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting token item entry")
-	}
-
-	return pkg.GetTransferContent(&itemResp.Item, networks[transfer.ToChain], &transfer)
 }

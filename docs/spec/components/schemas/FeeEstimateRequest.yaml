@@ -1,0 +1,19 @@
+allOf:
+  - $ref: '#/components/schemas/FeeEstimateKey'
+  - type: object
+    required:
+      - relationships
+      - attributes
+    properties:
+      attributes:
+        type: object
+      relationships:
+        type: object
+        required:
+        - transfer
+        - confirmation
+        properties:
+          transfer:
+            $ref: '#/components/schemas/TransferKey'
+          confirmation:
+            $ref: '#/components/schemas/ConfirmationKey'
