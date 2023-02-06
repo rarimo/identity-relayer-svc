@@ -5,7 +5,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarimo/relayer-svc/internal/helpers"
+	"gitlab.com/rarimo/relayer-svc/internal/data/core"
+	"gitlab.com/rarimo/relayer-svc/internal/utils"
 )
 
 type RelayTask struct {
@@ -15,6 +16,22 @@ type RelayTask struct {
 	MerklePath     []string
 
 	RetriesLeft int
+}
+
+func NewRelayTask(transfer core.TransferDetails, maxRetries int) RelayTask {
+	task := RelayTask{
+		OperationIndex: transfer.Transfer.Origin,
+		Signature:      transfer.Signature,
+		Origin:         transfer.Origin,
+		MerklePath:     make([]string, 0, len(transfer.MerklePath)),
+		RetriesLeft:    maxRetries,
+	}
+
+	for _, hash := range transfer.MerklePath {
+		task.MerklePath = append(task.MerklePath, hexutil.Encode(hash[:]))
+	}
+
+	return task
 }
 
 func (r RelayTask) Marshal() []byte {
@@ -35,7 +52,7 @@ func (r *RelayTask) Unmarshal(data string) {
 func (r RelayTask) MustParseMerklePath() [][32]byte {
 	path := [][32]byte{}
 	for _, hash := range r.MerklePath {
-		path = append(path, helpers.ToByte32(hexutil.MustDecode(hash)))
+		path = append(path, utils.ToByte32(hexutil.MustDecode(hash)))
 	}
 
 	return path

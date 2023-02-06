@@ -9,6 +9,7 @@ import (
 
 	"gitlab.com/rarimo/relayer-svc/internal/services"
 	"gitlab.com/rarimo/relayer-svc/internal/services/api"
+	"gitlab.com/rarimo/relayer-svc/internal/services/listeners"
 	"gitlab.com/rarimo/relayer-svc/internal/services/relayer"
 
 	"gitlab.com/rarimo/relayer-svc/internal/config"
@@ -55,8 +56,9 @@ func Run(args []string) {
 
 	runCmd := app.Command("run", "run command")
 	runAllCmd := runCmd.Command("all", "")
+	runDev := runCmd.Command("dev", "")
 	apiCmd := runCmd.Command("api", "run api")
-	schedulerCmd := runCmd.Command("scheduler", "run scheduler")
+	listenerCmd := runCmd.Command("listener", "run listener")
 	relayerCmd := runCmd.Command("relayer", "run relayer")
 
 	cmd, err := app.Parse(args[1:])
@@ -64,24 +66,38 @@ func Run(args []string) {
 		log.WithError(err).Fatal("failed to parse arguments")
 	}
 
+	runListeners := func() {
+		for _, chain := range cfg.EVM().Chains {
+			run(func(c config.Config, ctx context.Context) {
+				listeners.RunEVMListener(ctx, c, chain.Name)
+			})
+		}
+	}
+
 	switch cmd {
+	case runDev.FullCommand():
+		log.Info("starting all services in dev mode")
+		run(api.Run)
+		run(services.RunScheduler)
+		run(relayer.Run)
+		run(services.RunQueueCleaner)
 	case runAllCmd.FullCommand():
 		log.Info("starting all services")
 		run(api.Run)
-		run(services.RunScheduler)
+		runListeners()
 		run(relayer.Run)
 		run(services.RunQueueCleaner)
 	case apiCmd.FullCommand():
 		log.Info("starting API")
 		run(api.Run)
-	case schedulerCmd.FullCommand():
-		log.Info("starting scheduler")
-		run(services.RunScheduler)
 	case relayerCmd.FullCommand():
 		log.Info("starting relayer")
 		run(relayer.Run)
 		log.Info("starting queue cleaner")
 		run(services.RunQueueCleaner)
+	case listenerCmd.FullCommand():
+		log.Info("starting listeners")
+		runListeners()
 	default:
 		log.Fatal("unknown command %s", cmd)
 	}

@@ -15,7 +15,7 @@ import (
 	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 
 	"gitlab.com/rarimo/relayer-svc/internal/data"
-	"gitlab.com/rarimo/relayer-svc/internal/helpers"
+	"gitlab.com/rarimo/relayer-svc/internal/utils"
 	"gitlab.com/rarimo/solana-program-go/contract"
 )
 
@@ -29,7 +29,7 @@ func (c *relayerConsumer) processSolanaTransfer(
 	log := c.log.WithField("op_id", task.OperationIndex)
 
 	receiver := hexutil.MustDecode(transfer.Receiver)
-	origin := helpers.ToByte32(hexutil.MustDecode(task.Origin))
+	origin := utils.ToByte32(hexutil.MustDecode(task.Origin))
 	signature := hexutil.MustDecode(task.Signature)
 	amount, err := getAmountOrDefault(transfer.Amount, big.NewInt(1))
 	if err != nil {
@@ -42,7 +42,7 @@ func (c *relayerConsumer) processSolanaTransfer(
 		RecoveryId: signature[64],
 		Seeds:      c.solana.BridgeAdminSeed,
 		Origin:     origin,
-		Signature:  helpers.ToByte64(signature),
+		Signature:  utils.ToByte64(signature),
 	}
 
 	withdrawAddress, _, err := solana.FindProgramAddress([][]byte{origin[:]}, c.solana.BridgeProgramID)

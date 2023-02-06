@@ -1,13 +1,17 @@
 package config
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"math/big"
 	"reflect"
 
+	avalanche "github.com/ava-labs/subnet-evm/ethclient"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/spf13/cast"
 	"gitlab.com/distributed_lab/figure/v3"
 	"gitlab.com/distributed_lab/kit/comfig"
@@ -29,12 +33,22 @@ type EVM struct {
 }
 
 type EVMChain struct {
-	Name                string            `fig:"name"`
-	BridgeAddress       common.Address    `fig:"bridge_address"`
-	SubmitterPrivateKey *ecdsa.PrivateKey `fig:"submitter_private_key"`
-	SubmitterAddress    common.Address    `fig:"-"`
-	RPC                 *ethclient.Client `fig:"rpc"`
-	ChainID             *big.Int          `fig:"-"`
+	Name                 string            `fig:"name,required"`
+	BridgeAddress        common.Address    `fig:"bridge_address,required"`
+	SubmitterPrivateKey  *ecdsa.PrivateKey `fig:"submitter_private_key,required"`
+	SubmitterAddress     common.Address    `fig:"-"`
+	RPC                  *ethclient.Client `fig:"-"`
+	RPCURL               string            `fig:"rpc,required"`
+	ChainID              *big.Int          `fig:"-"`
+	TollboothAddress     common.Address    `fig:"tollbooth_address,required"`
+	GasToken             string            `fig:"gas_token,required"`
+	GasTokenAddress      common.Address    `fig:"gas_token_address,required"`
+	RelayFeeToken        string            `fig:"relay_fee_token,required"`
+	RelayFeeTokenAddress common.Address    `fig:"relay_fee_token_address,required"`
+	UniswapPoolAddress   common.Address    `fig:"uniswap_pool_address,required"`
+	UseUniswapV2         bool              `fig:"use_uniswap_v2"`
+
+	avalancheOnce comfig.Once
 }
 
 func NewEVMer(getter kv.Getter) EVMer {
@@ -49,7 +63,7 @@ func (e *evmer) EVM() *EVM {
 
 		err := figure.
 			Out(&cfg).
-			With(figure.BaseHooks, figure.EthereumHooks, evmHooks).
+			With(figure.BaseHooks, sliceHook).
 			From(kv.MustGetStringMap(e.getter, "evm")).
 			Please()
 		if err != nil {
@@ -69,6 +83,17 @@ func (e *EVMChain) TransactorOpts() *bind.TransactOpts {
 	return t
 }
 
+func (e *EVMChain) AvalancheRPC() avalanche.Client {
+	return e.avalancheOnce.Do(func() interface{} {
+		client, err := avalanche.Dial(e.RPCURL)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to dial avalanche rpc"))
+		}
+
+		return client
+	}).(avalanche.Client)
+}
+
 func (e *EVM) GetChainByName(name string) (*EVMChain, bool) {
 	for _, chain := range e.Chains {
 		if chain.Name == name {
@@ -79,18 +104,48 @@ func (e *EVM) GetChainByName(name string) (*EVMChain, bool) {
 	return nil, false
 }
 
-var evmHooks = figure.Hooks{
-	"*ethclient.Client": func(raw interface{}) (reflect.Value, error) {
-		v, err := cast.ToStringE(raw)
+var sliceHook = figure.Hooks{
+	"[]config.EVMChain": func(value interface{}) (reflect.Value, error) {
+		chains, err := parseEVMChain(value)
 		if err != nil {
-			return reflect.Value{}, errors.Wrap(err, "expected string")
+			return reflect.Value{}, err
 		}
 
-		client, err := ethclient.Dial(v)
-		if err != nil {
-			return reflect.Value{}, errors.Wrap(err, "failed to dial eth rpc")
-		}
-
-		return reflect.ValueOf(client), nil
+		return reflect.ValueOf(chains), nil
 	},
+}
+
+func parseEVMChain(value interface{}) ([]EVMChain, error) {
+	rawSlice, err := cast.ToSliceE(value)
+	if err != nil {
+		return nil, errors.Wrap(err, "expected slice of EVMChain")
+	}
+
+	chains := make([]EVMChain, len(rawSlice))
+	for idx, val := range rawSlice {
+		raw, err := cast.ToStringMapE(val)
+		if err != nil {
+			return nil, errors.Wrap(err, "expected EVMChain to be map[string]interface{}")
+		}
+
+		var chain EVMChain
+		if err = figure.Out(&chain).With(figure.BaseHooks, figure.EthereumHooks).From(raw).Please(); err != nil {
+			return nil, errors.Wrap(err, "malformed EVMChain")
+		}
+		chain.RPC, err = ethclient.Dial(chain.RPCURL)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to dial eth rpc")
+		}
+
+		cID, err := chain.RPC.ChainID(context.TODO())
+		if err != nil {
+			panic(errors.Wrap(err, "failed to get chain id"))
+		}
+		chain.ChainID = cID
+		chain.SubmitterAddress = crypto.PubkeyToAddress(chain.SubmitterPrivateKey.PublicKey)
+
+		chains[idx] = chain
+	}
+
+	return chains, nil
 }

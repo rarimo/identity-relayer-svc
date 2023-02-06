@@ -11,7 +11,7 @@ import (
 	"gitlab.com/distributed_lab/kit/comfig"
 	"gitlab.com/distributed_lab/kit/kv"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarimo/relayer-svc/internal/helpers"
+	"gitlab.com/rarimo/relayer-svc/internal/utils"
 )
 
 type Solaner interface {
@@ -78,7 +78,7 @@ func (s *solaner) Solana() *Solana {
 		if err != nil {
 			panic(errors.Wrap(err, "valid base58-encoded solana seed expected"))
 		}
-		result.BridgeAdminSeed = helpers.ToByte32(seed)
+		result.BridgeAdminSeed = utils.ToByte32(seed)
 
 		bridgeAdmin, err := solana.CreateProgramAddress([][]byte{seed[:]}, programID)
 		if err != nil {

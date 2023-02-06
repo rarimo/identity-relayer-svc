@@ -5,14 +5,14 @@ import (
 	"gitlab.com/distributed_lab/kit/copus"
 	"gitlab.com/distributed_lab/kit/copus/types"
 	"gitlab.com/distributed_lab/kit/kv"
-	rediser "gitlab.com/rarimo/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/data/redis"
 )
 
 type Config interface {
 	comfig.Logger
 	types.Copuser
 	comfig.Listenerer
-	rediser.Rediserer
+	redis.Rediserer
 	Tenderminter
 	Cosmoser
 	EVMer
@@ -24,7 +24,7 @@ type config struct {
 	comfig.Logger
 	types.Copuser
 	comfig.Listenerer
-	rediser.Rediserer
+	redis.Rediserer
 	getter kv.Getter
 	Tenderminter
 	Cosmoser
@@ -40,7 +40,7 @@ func New(getter kv.Getter) Config {
 		Copuser:      copus.NewCopuser(getter),
 		Listenerer:   comfig.NewListenerer(getter),
 		Logger:       logger,
-		Rediserer:    rediser.NewRediserer(getter, logger.Log()),
+		Rediserer:    redis.NewRediserer(getter, logger.Log()),
 		Tenderminter: NewTenderminter(getter),
 		Cosmoser:     NewCosmoser(getter),
 		EVMer:        NewEVMer(getter),

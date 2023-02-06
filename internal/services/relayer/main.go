@@ -14,10 +14,15 @@ import (
 
 	"gitlab.com/rarimo/relayer-svc/internal/config"
 	"gitlab.com/rarimo/relayer-svc/internal/data"
+	"gitlab.com/rarimo/relayer-svc/internal/data/core"
+	"gitlab.com/rarimo/relayer-svc/internal/types"
+
+	"gitlab.com/rarimo/relayer-svc/internal/services/bridger"
+	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/evm"
 )
 
 const (
-	MaxRetries = 3
+	MaxRetries = 0
 
 	prefetchLimit = 10
 	pollDuration  = 100 * time.Millisecond
@@ -34,6 +39,7 @@ type relayerConsumer struct {
 	rarimocore   rarimocore.QueryClient
 	tokenmanager tokenmanager.QueryClient
 	evm          *config.EVM
+	evmBridgger  bridger.Bridger
 	solana       *config.Solana
 	near         *config.Near
 	queue        rmq.Queue
@@ -68,6 +74,7 @@ func newConsumer(cfg config.Config, id string) *relayerConsumer {
 		rarimocore:   rarimocore.NewQueryClient(cfg.Cosmos()),
 		tokenmanager: tokenmanager.NewQueryClient(cfg.Cosmos()),
 		evm:          cfg.EVM(),
+		evmBridgger:  evm.NewEVMBridger(cfg),
 		solana:       cfg.Solana(),
 		near:         cfg.Near(),
 		queue:        cfg.Redis().OpenRelayQueue(),
@@ -97,8 +104,9 @@ func (c *relayerConsumer) Consume(delivery rmq.Delivery) {
 }
 
 func (c *relayerConsumer) processTransfer(task data.RelayTask) error {
-	c.log.WithField("op_id", task.OperationIndex).Info("processing a transfer")
+	log := c.log.WithField("op_id", task.OperationIndex)
 
+	log.Info("processing a transfer")
 	operation, err := c.rarimocore.Operation(context.TODO(), &rarimocore.QueryGetOperationRequest{Index: task.OperationIndex})
 	if err != nil {
 		return errors.Wrap(err, "failed to get the transfer")
@@ -133,28 +141,42 @@ func (c *relayerConsumer) processTransfer(task data.RelayTask) error {
 		return errors.Wrap(err, "error getting network info entry")
 	}
 
-	c.log.
+	transferDetails := core.TransferDetails{
+		Transfer:     transfer,
+		Token:        tokenInfo.Info,
+		TokenDetails: tokenDetails.Item,
+		Signature:    task.Signature,
+		Origin:       task.Origin,
+		MerklePath:   task.MustParseMerklePath(),
+	}
+
+	log.
 		WithFields(logan.F{
-			"op_id":      task.OperationIndex,
 			"to":         transfer.Receiver,
 			"token_type": tokenDetails.Item.TokenType,
 			"to_chain":   transfer.ToChain,
 		}).
 		Info("relaying a transfer")
 
-	if chain, found := c.evm.GetChainByName(transfer.ToChain); found {
-		if err := c.processEVMTransfer(task, transfer, *token, tokenDetails.Item, network.Params, chain); err != nil {
+	switch {
+	case types.IsEVM(transfer.ToChain):
+		if err := c.evmBridgger.Withdraw(context.TODO(), transferDetails); err != nil {
+			if errors.Cause(err) == bridger.ErrAlreadyWithdrawn {
+				log.Info("transfer was already withdrawn")
+				return nil
+			}
+
 			return errors.Wrap(err, "failed to process ethereum transfer")
 		}
-	} else if transfer.ToChain == "Solana" {
+	case transfer.ToChain == types.SolanaMainnet:
 		if err := c.processSolanaTransfer(task, transfer, *token, tokenDetails.Item, network.Params); err != nil {
 			return errors.Wrap(err, "failed to process solana transfer")
 		}
-	} else if transfer.ToChain == "Near" {
+	case transfer.ToChain == types.NearMainnet:
 		if err := c.processNearTransfer(task, transfer, *token, tokenDetails.Item, network.Params); err != nil {
 			return errors.Wrap(err, "failed to process near transfer")
 		}
-	} else {
+	default:
 		return fmt.Errorf("toChain = %s is not supported", transfer.ToChain)
 	}
 

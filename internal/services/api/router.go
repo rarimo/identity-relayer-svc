@@ -21,6 +21,7 @@ func (s *api) router() chi.Router {
 
 	r.Route("/relayer", func(r chi.Router) {
 		r.Route("/v1", func(r chi.Router) {
+			r.Post("/fee_estimates", handlers.PostFeeEstimate)
 			r.Post("/relay_tasks", handlers.PostRelayTask)
 		})
 	})
