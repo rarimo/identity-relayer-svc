@@ -9,7 +9,9 @@ import (
 
 	"gitlab.com/rarimo/relayer-svc/internal/services"
 	"gitlab.com/rarimo/relayer-svc/internal/services/api"
-	"gitlab.com/rarimo/relayer-svc/internal/services/listeners"
+	evmListener "gitlab.com/rarimo/relayer-svc/internal/services/listeners/evm"
+	solListener "gitlab.com/rarimo/relayer-svc/internal/services/listeners/solana"
+
 	"gitlab.com/rarimo/relayer-svc/internal/services/relayer"
 
 	"gitlab.com/rarimo/relayer-svc/internal/config"
@@ -31,6 +33,7 @@ func Run(args []string) {
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	cfg := config.New(kv.MustFromEnv())
 	log := cfg.Log()
 
@@ -56,7 +59,7 @@ func Run(args []string) {
 
 	runCmd := app.Command("run", "run command")
 	runAllCmd := runCmd.Command("all", "")
-	runDev := runCmd.Command("dev", "")
+	runAutoRelayCmd := runCmd.Command("autorelay", "run autorelay")
 	apiCmd := runCmd.Command("api", "run api")
 	listenerCmd := runCmd.Command("listener", "run listener")
 	relayerCmd := runCmd.Command("relayer", "run relayer")
@@ -69,14 +72,16 @@ func Run(args []string) {
 	runListeners := func() {
 		for _, chain := range cfg.EVM().Chains {
 			run(func(c config.Config, ctx context.Context) {
-				listeners.RunEVMListener(ctx, c, chain.Name)
+				evmListener.RunEVMListener(ctx, c, chain.Name)
 			})
 		}
+
+		run(solListener.RunSolanaListener)
 	}
 
 	switch cmd {
-	case runDev.FullCommand():
-		log.Info("starting all services in dev mode")
+	case runAutoRelayCmd.FullCommand():
+		log.Info("starting all services in autorelay mode")
 		run(api.Run)
 		run(services.RunScheduler)
 		run(relayer.Run)

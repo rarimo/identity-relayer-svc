@@ -33,20 +33,13 @@ type EVM struct {
 }
 
 type EVMChain struct {
-	Name                 string            `fig:"name,required"`
-	BridgeAddress        common.Address    `fig:"bridge_address,required"`
-	SubmitterPrivateKey  *ecdsa.PrivateKey `fig:"submitter_private_key,required"`
-	SubmitterAddress     common.Address    `fig:"-"`
-	RPC                  *ethclient.Client `fig:"-"`
-	RPCURL               string            `fig:"rpc,required"`
-	ChainID              *big.Int          `fig:"-"`
-	TollboothAddress     common.Address    `fig:"tollbooth_address,required"`
-	GasToken             string            `fig:"gas_token,required"`
-	GasTokenAddress      common.Address    `fig:"gas_token_address,required"`
-	RelayFeeToken        string            `fig:"relay_fee_token,required"`
-	RelayFeeTokenAddress common.Address    `fig:"relay_fee_token_address,required"`
-	UniswapPoolAddress   common.Address    `fig:"uniswap_pool_address,required"`
-	UseUniswapV2         bool              `fig:"use_uniswap_v2"`
+	Name                string            `fig:"name,required"`
+	BridgeAddress       common.Address    `fig:"bridge_address,required"`
+	SubmitterPrivateKey *ecdsa.PrivateKey `fig:"submitter_private_key,required"`
+	SubmitterAddress    common.Address    `fig:"-"`
+	RPC                 *ethclient.Client `fig:"-"`
+	RPCURL              string            `fig:"rpc,required"`
+	ChainID             *big.Int          `fig:"-"`
 
 	avalancheOnce comfig.Once
 }

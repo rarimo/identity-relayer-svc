@@ -18,7 +18,7 @@ import (
 	"gitlab.com/rarimo/relayer-svc/internal/types"
 
 	"gitlab.com/rarimo/relayer-svc/internal/services/bridger"
-	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/evm"
+	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/bridge"
 )
 
 const (
@@ -35,14 +35,14 @@ type relayer struct {
 }
 
 type relayerConsumer struct {
-	log          *logan.Entry
-	rarimocore   rarimocore.QueryClient
-	tokenmanager tokenmanager.QueryClient
-	evm          *config.EVM
-	evmBridgger  bridger.Bridger
-	solana       *config.Solana
-	near         *config.Near
-	queue        rmq.Queue
+	log             *logan.Entry
+	rarimocore      rarimocore.QueryClient
+	tokenmanager    tokenmanager.QueryClient
+	evm             *config.EVM
+	bridgerProvider bridger.BridgerProvider
+	solana          *config.Solana
+	near            *config.Near
+	queue           rmq.Queue
 }
 
 func Run(cfg config.Config, ctx context.Context) {
@@ -70,14 +70,14 @@ func Run(cfg config.Config, ctx context.Context) {
 
 func newConsumer(cfg config.Config, id string) *relayerConsumer {
 	return &relayerConsumer{
-		log:          cfg.Log().WithField("service", id),
-		rarimocore:   rarimocore.NewQueryClient(cfg.Cosmos()),
-		tokenmanager: tokenmanager.NewQueryClient(cfg.Cosmos()),
-		evm:          cfg.EVM(),
-		evmBridgger:  evm.NewEVMBridger(cfg),
-		solana:       cfg.Solana(),
-		near:         cfg.Near(),
-		queue:        cfg.Redis().OpenRelayQueue(),
+		log:             cfg.Log().WithField("service", id),
+		rarimocore:      rarimocore.NewQueryClient(cfg.Cosmos()),
+		tokenmanager:    tokenmanager.NewQueryClient(cfg.Cosmos()),
+		evm:             cfg.EVM(),
+		solana:          cfg.Solana(),
+		near:            cfg.Near(),
+		queue:           cfg.Redis().OpenRelayQueue(),
+		bridgerProvider: bridger.NewBridgerProvider(cfg),
 	}
 }
 
@@ -159,25 +159,19 @@ func (c *relayerConsumer) processTransfer(task data.RelayTask) error {
 		Info("relaying a transfer")
 
 	switch {
-	case types.IsEVM(transfer.ToChain):
-		if err := c.evmBridgger.Withdraw(context.TODO(), transferDetails); err != nil {
-			if errors.Cause(err) == bridger.ErrAlreadyWithdrawn {
-				log.Info("transfer was already withdrawn")
-				return nil
-			}
-
-			return errors.Wrap(err, "failed to process ethereum transfer")
-		}
-	case transfer.ToChain == types.SolanaMainnet:
-		if err := c.processSolanaTransfer(task, transfer, *token, tokenDetails.Item, network.Params); err != nil {
-			return errors.Wrap(err, "failed to process solana transfer")
-		}
-	case transfer.ToChain == types.NearMainnet:
-		if err := c.processNearTransfer(task, transfer, *token, tokenDetails.Item, network.Params); err != nil {
-			return errors.Wrap(err, "failed to process near transfer")
-		}
+	case transfer.ToChain == types.Near:
+		err = c.processNearTransfer(task, transfer, *token, tokenDetails.Item, network.Params)
 	default:
-		return fmt.Errorf("toChain = %s is not supported", transfer.ToChain)
+		bridger := c.bridgerProvider.GetBridger(transfer.ToChain)
+		err = bridger.Withdraw(context.Background(), transferDetails)
+	}
+
+	if errors.Cause(err) == bridge.ErrAlreadyWithdrawn {
+		log.Info("transfer was already withdrawn")
+		return nil
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to process a transfer")
 	}
 
 	return nil

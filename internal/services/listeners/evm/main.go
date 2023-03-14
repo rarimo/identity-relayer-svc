@@ -1,4 +1,4 @@
-package listeners
+package evm
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"gitlab.com/rarimo/relayer-svc/internal/data/core"
 	"gitlab.com/rarimo/relayer-svc/internal/services"
 	"gitlab.com/rarimo/relayer-svc/internal/services/bridger"
-	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/evm"
+	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/bridge"
 )
 
 func RunEVMListener(ctx context.Context, cfg config.Config, chainName string) {
@@ -30,20 +30,22 @@ func RunEVMListener(ctx context.Context, cfg config.Config, chainName string) {
 	log := cfg.Log().WithField("runner", runnerName)
 	log.Info("starting listener")
 
-	handler, err := gobind.NewTollbooth(chain.TollboothAddress, chain.RPC)
+	handler, err := gobind.NewTollbooth(cfg.Tollbooth().GetEVMConfig(chainName).TollboothAddress, chain.RPC)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to init native handler"))
 	}
 
+	bridgerProvider := bridger.NewBridgerProvider(cfg)
 	listener := evmListener{
-		log:       log,
-		redis:     cfg.Redis().Client(),
-		chain:     chain,
-		handler:   handler,
-		core:      core.NewCore(cfg),
-		cursorKey: fmt.Sprintf("%s:tollbooth-cursor", chainName),
-		scheduler: services.NewScheduler(cfg),
-		bridge:    evm.NewEVMBridger(cfg),
+		log:             log,
+		redis:           cfg.Redis().Client(),
+		chain:           chain,
+		handler:         handler,
+		core:            core.NewCore(cfg),
+		cursorKey:       fmt.Sprintf("%s:tollbooth-cursor", chainName),
+		scheduler:       services.NewScheduler(cfg),
+		bridge:          bridgerProvider.GetBridger(chainName),
+		bridgerProvider: bridgerProvider,
 	}
 
 	cursor, err := listener.getCursor(ctx)
@@ -79,14 +81,15 @@ func RunEVMListener(ctx context.Context, cfg config.Config, chainName string) {
 }
 
 type evmListener struct {
-	log       *logan.Entry
-	redis     *redis.Client
-	handler   *gobind.Tollbooth
-	chain     *config.EVMChain
-	core      core.Core
-	scheduler services.Scheduler
-	cursorKey string
-	bridge    bridger.Bridger
+	log             *logan.Entry
+	redis           *redis.Client
+	handler         *gobind.Tollbooth
+	chain           *config.EVMChain
+	core            core.Core
+	scheduler       services.Scheduler
+	cursorKey       string
+	bridge          bridge.Bridger
+	bridgerProvider bridger.BridgerProvider
 }
 
 func (l *evmListener) catchup(ctx context.Context, cursor uint64) (nextCursor uint64, err error) {
@@ -167,7 +170,6 @@ func (l *evmListener) subscription(cursor uint64) func(ctx context.Context) erro
 	}
 }
 
-// handleFeePaid saves Native deposit event to storage and updates cursor in storage, returning it as well
 func (l *evmListener) handleFeePaid(ctx context.Context, e *gobind.TollboothFeePaid, cursor uint64) (uint64, error) {
 	confirmationID := hexutil.Encode(e.ConfirmationId.Bytes())
 	transferID := hexutil.Encode(e.TransferId.Bytes())
@@ -176,7 +178,12 @@ func (l *evmListener) handleFeePaid(ctx context.Context, e *gobind.TollboothFeeP
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to get transfer")
 	}
-	estimate, err := l.bridge.EstimateRelayFee(ctx, *transfer)
+	targetBridger := l.bridgerProvider.GetBridger(transfer.Transfer.ToChain)
+	estimate, err := targetBridger.EstimateRelayFee(ctx, *transfer)
+	if errors.Cause(err) == bridge.ErrAlreadyWithdrawn {
+		l.log.Info("transfer already withdrawn, skipping")
+		return e.Raw.BlockNumber, nil
+	}
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to estimate relay fee")
 	}
