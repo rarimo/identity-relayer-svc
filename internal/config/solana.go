@@ -2,11 +2,13 @@ package config
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/mr-tron/base58"
 	"github.com/olegfomenko/solana-go"
 	"github.com/olegfomenko/solana-go/rpc"
 	"github.com/olegfomenko/solana-go/rpc/ws"
+	"github.com/spf13/cast"
 	"gitlab.com/distributed_lab/figure/v3"
 	"gitlab.com/distributed_lab/kit/comfig"
 	"gitlab.com/distributed_lab/kit/kv"
@@ -19,12 +21,12 @@ type Solaner interface {
 }
 
 type Solana struct {
-	RPC                 *rpc.Client
-	WS                  *ws.Client
-	BridgeAdmin         solana.PublicKey
-	BridgeAdminSeed     [32]byte
-	BridgeProgramID     solana.PublicKey
-	SubmitterPrivateKey solana.PrivateKey
+	RPC                 *rpc.Client       `fig:"rpc,required"`
+	WS                  *ws.Client        `fig:"ws,required"`
+	BridgeAdmin         solana.PublicKey  `fig:"-"`
+	BridgeAdminSeed     [32]byte          `fig:"bridge_admin_seed,required"`
+	BridgeProgramID     solana.PublicKey  `fig:"bridge_program_id,required"`
+	SubmitterPrivateKey solana.PrivateKey `fig:"submitter_private_key,required"`
 }
 
 type solaner struct {
@@ -40,52 +42,77 @@ func NewSolaner(getter kv.Getter) Solaner {
 
 func (s *solaner) Solana() *Solana {
 	return s.once.Do(func() interface{} {
-		var config struct {
-			RPC                 string `fig:"rpc"`
-			WS                  string `fig:"ws"`
-			SubmitterPrivateKey string `fig:"submitter_private_key"`
-			BridgeAdminSeed     string `fig:"bridge_admin_seed"`
-			BridgeProgramID     string `fig:"bridge_program_id"`
-		}
+		config := Solana{}
 
-		if err := figure.Out(&config).From(kv.MustGetStringMap(s.getter, "solana")).Please(); err != nil {
+		if err := figure.Out(&config).With(solanaHooks, figure.BaseHooks).From(kv.MustGetStringMap(s.getter, "solana")).Please(); err != nil {
 			panic(errors.Wrap(err, "failed to figure out config for solana"))
 		}
-
-		result := Solana{}
-		result.RPC = rpc.New(config.RPC)
-
-		// Create a new WS client (used for confirming transactions)
-		wsClient, err := ws.Connect(context.Background(), config.WS)
+		bridgeAdmin, err := solana.CreateProgramAddress([][]byte{config.BridgeAdminSeed[:]}, config.BridgeProgramID)
 		if err != nil {
-			panic(errors.Wrap(err, "failed to open the socket"))
+			panic(errors.Wrap(err, "failed to create program address"))
 		}
-		result.WS = wsClient
+		config.BridgeAdmin = bridgeAdmin
 
-		key, err := solana.PrivateKeyFromBase58(config.SubmitterPrivateKey)
+		return &config
+	}).(*Solana)
+}
+
+var solanaHooks = figure.Hooks{
+	"solana.PublicKey": func(value interface{}) (reflect.Value, error) {
+		rawPubKey, err := cast.ToStringE(value)
+		if err != nil {
+			return reflect.Value{}, errors.Wrap(err, "expected a base58-encoded solana public key")
+		}
+
+		pubKey, err := solana.PublicKeyFromBase58(rawPubKey)
+		if err != nil {
+			panic(errors.Wrap(err, "valid base58-encoded solana public key expected"))
+		}
+		return reflect.ValueOf(pubKey), nil
+	},
+	"solana.PrivateKey": func(value interface{}) (reflect.Value, error) {
+		rawPrivKey, err := cast.ToStringE(value)
+		if err != nil {
+			return reflect.Value{}, errors.Wrap(err, "expected a base58-encoded solana private key")
+		}
+
+		privKey, err := solana.PrivateKeyFromBase58(rawPrivKey)
 		if err != nil {
 			panic(errors.Wrap(err, "valid base58-encoded solana private key expected"))
 		}
-		result.SubmitterPrivateKey = key
-
-		programID, err := solana.PublicKeyFromBase58(config.BridgeProgramID)
+		return reflect.ValueOf(privKey), nil
+	},
+	"[32]uint8": func(value interface{}) (reflect.Value, error) {
+		rawSeed, err := cast.ToStringE(value)
 		if err != nil {
-			panic(errors.Wrap(err, "valid base58-encoded solana program ID expected"))
+			return reflect.Value{}, errors.Wrap(err, "expected a base58-encoded solana seed")
 		}
-		result.BridgeProgramID = programID
 
-		seed, err := base58.Decode(config.BridgeAdminSeed)
+		seed, err := base58.Decode(rawSeed)
 		if err != nil {
 			panic(errors.Wrap(err, "valid base58-encoded solana seed expected"))
 		}
-		result.BridgeAdminSeed = utils.ToByte32(seed)
-
-		bridgeAdmin, err := solana.CreateProgramAddress([][]byte{seed[:]}, programID)
+		return reflect.ValueOf(utils.ToByte32(seed)), nil
+	},
+	"*rpc.Client": func(value interface{}) (reflect.Value, error) {
+		rawRPC, err := cast.ToStringE(value)
 		if err != nil {
-			panic(errors.Wrap(err, "failed to create the bridge admin address"))
+			return reflect.Value{}, errors.Wrap(err, "expected a valid solana RPC URL")
 		}
-		result.BridgeAdmin = bridgeAdmin
 
-		return &result
-	}).(*Solana)
+		rpcClient := rpc.New(rawRPC)
+		return reflect.ValueOf(rpcClient), nil
+	},
+	"*ws.Client": func(value interface{}) (reflect.Value, error) {
+		rawWS, err := cast.ToStringE(value)
+		if err != nil {
+			return reflect.Value{}, errors.Wrap(err, "expected a valid solana WS URL")
+		}
+
+		wsClient, err := ws.Connect(context.Background(), rawWS)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to open the socket"))
+		}
+		return reflect.ValueOf(wsClient), nil
+	},
 }

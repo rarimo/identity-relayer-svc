@@ -18,6 +18,7 @@ type Config interface {
 	EVMer
 	Solaner
 	Nearer
+	Tollboother
 }
 
 type config struct {
@@ -31,6 +32,7 @@ type config struct {
 	EVMer
 	Solaner
 	Nearer
+	Tollboother
 }
 
 func New(getter kv.Getter) Config {
@@ -46,5 +48,6 @@ func New(getter kv.Getter) Config {
 		EVMer:        NewEVMer(getter),
 		Solaner:      NewSolaner(getter),
 		Nearer:       NewNearer(getter),
+		Tollboother:  NewTollboother(getter),
 	}
 }

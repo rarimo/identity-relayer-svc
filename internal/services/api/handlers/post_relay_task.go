@@ -26,15 +26,24 @@ func newPostRelayTaskRequest(r *http.Request) (*postRelayTask, error) {
 	}
 
 	errs := ozzo.Errors{}
+	errs["data.relationships.confirmation.data.id"] = ozzo.Validate(
+		request.Data.Relationships.Confirmation.Data.ID,
+		ozzo.Required, hexValidator,
+	)
+	errs["data.relationships.transfer.data.id"] = ozzo.Validate(
+		request.Data.Relationships.Transfer.Data.ID,
+		ozzo.Required, hexValidator,
+	)
+	if errs.Filter() != nil {
+		return nil, errs.Filter()
+	}
+
 	res := &postRelayTask{
 		ConfirmationID: request.Data.Relationships.Confirmation.Data.ID,
 		TransferID:     request.Data.Relationships.Transfer.Data.ID,
 	}
 
-	errs["data.relationships.confirmation.data.id"] = ozzo.Validate(res.ConfirmationID, ozzo.Required, hexValidator)
-	errs["data.relationships.transfer.data.id"] = ozzo.Validate(res.TransferID, ozzo.Required, hexValidator)
-
-	return res, errs.Filter()
+	return res, nil
 }
 
 func PostRelayTask(w http.ResponseWriter, r *http.Request) {

@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ozzo "github.com/go-ozzo/ozzo-validation/v4"
-	"github.com/google/jsonapi"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 
 	"gitlab.com/distributed_lab/ape"
@@ -15,8 +14,7 @@ import (
 
 	"gitlab.com/rarimo/relayer-svc/internal/data/core"
 	"gitlab.com/rarimo/relayer-svc/internal/services/bridger"
-	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/evm"
-	"gitlab.com/rarimo/relayer-svc/internal/types"
+	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/bridge"
 	"gitlab.com/rarimo/relayer-svc/resources"
 )
 
@@ -32,14 +30,24 @@ func newPostFeeEstimate(r *http.Request) (*postFeeEstimate, error) {
 	}
 
 	errs := ozzo.Errors{}
+	errs["data/relationships/confirmation/data/id"] = ozzo.Validate(
+		request.Data.Relationships.Confirmation.Data.ID,
+		ozzo.Required, hexValidator,
+	)
+	errs["data/relationships/transfer/data/id"] = ozzo.Validate(
+		request.Data.Relationships.Transfer.Data.ID,
+		ozzo.Required, hexValidator,
+	)
+	if errs.Filter() != nil {
+		return nil, errs.Filter()
+	}
+
 	res := &postFeeEstimate{
 		ConfirmationID: request.Data.Relationships.Confirmation.Data.ID,
 		TransferID:     request.Data.Relationships.Transfer.Data.ID,
 	}
-	errs["data.relationships.confirmation.data.id"] = ozzo.Validate(res.ConfirmationID, ozzo.Required, hexValidator)
-	errs["data.relationships.transfer.data.id"] = ozzo.Validate(res.TransferID, ozzo.Required, hexValidator)
 
-	return res, errs.Filter()
+	return res, nil
 }
 
 func PostFeeEstimate(w http.ResponseWriter, r *http.Request) {
@@ -55,22 +63,15 @@ func PostFeeEstimate(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		panic(errors.Wrap(err, "failed to get the transfer"))
 	}
-	if !types.IsEVM(transfer.Transfer.ToChain) {
-		ape.RenderErr(w, &jsonapi.ErrorObject{
-			Status: "501",
-			Title:  "Unsupported chain",
-			Detail: fmt.Sprintf("Chain %s is not supported", transfer.Transfer.ToChain),
-		})
-		return
-	}
 
-	bridge := evm.NewEVMBridger(Config(r))
-	feeEstimate, err := bridge.EstimateRelayFee(r.Context(), *transfer)
-	if errors.Cause(err) == bridger.ErrAlreadyWithdrawn {
-		ape.RenderErr(w, &jsonapi.ErrorObject{
-			Status: "409",
-			Title:  "Already withdrawn",
-		})
+	bridgerProvider := bridger.NewBridgerProvider(Config(r))
+	b := bridgerProvider.GetBridger(transfer.Transfer.ToChain)
+
+	feeEstimate, err := b.EstimateRelayFee(r.Context(), *transfer)
+	if errors.Cause(err) == bridge.ErrAlreadyWithdrawn {
+		response := problems.Conflict()
+		response.Detail = "Transfer already withdrawn"
+		ape.RenderErr(w, response)
 		return
 	}
 	if err != nil {

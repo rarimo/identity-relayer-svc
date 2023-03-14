@@ -24,7 +24,7 @@ import (
 	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 	"gitlab.com/rarimo/relayer-svc/internal/config"
 	"gitlab.com/rarimo/relayer-svc/internal/data/core"
-	"gitlab.com/rarimo/relayer-svc/internal/services/bridger"
+	bridge "gitlab.com/rarimo/relayer-svc/internal/services/bridger/bridge"
 	chains "gitlab.com/rarimo/relayer-svc/internal/types"
 	"gitlab.com/rarimo/relayer-svc/internal/utils"
 
@@ -39,15 +39,17 @@ type evmBridger struct {
 	tokenmanager tokenmanager.QueryClient
 	evm          *config.EVM
 	redis        *redis.Client
+	tollbooth    *config.Tollbooth
 }
 
-func NewEVMBridger(cfg config.Config) bridger.Bridger {
+func NewEVMBridger(cfg config.Config) bridge.Bridger {
 	return &evmBridger{
-		log:          cfg.Log().WithField("service", "evm_bridger"),
+		log:          cfg.Log().WithField("service", "evm_bridge"),
 		rarimocore:   rarimocore.NewQueryClient(cfg.Cosmos()),
 		tokenmanager: tokenmanager.NewQueryClient(cfg.Cosmos()),
 		evm:          cfg.EVM(),
 		redis:        cfg.Redis().Client(),
+		tollbooth:    cfg.Tollbooth(),
 	}
 }
 
@@ -57,20 +59,9 @@ func (b *evmBridger) makeWitdrawTx(
 	simulation bool,
 ) (*config.EVMChain, *types.Transaction, error) {
 	chain := b.mustGetChain(transfer.Transfer.ToChain)
-	bridge, err := evmbind.NewBridge(chain.BridgeAddress, chain.RPC)
+	bridger, err := evmbind.NewBridge(chain.BridgeAddress, chain.RPC)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to make an instance of ethereum bridge")
-	}
-
-	withdrawn, err := bridge.BridgeCaller.UsedHashes(
-		&bind.CallOpts{Pending: false, Context: ctx},
-		utils.ToByte32(hexutil.MustDecode(transfer.Origin)),
-	)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to check if the transfer was already withdrawn")
-	}
-	if withdrawn {
-		return nil, nil, bridger.ErrAlreadyWithdrawn
+		return nil, nil, errors.Wrap(err, "failed to make an instance of ethereum bridger")
 	}
 
 	amount, err := utils.GetAmountOrDefault(transfer.Transfer.Amount, big.NewInt(1))
@@ -118,7 +109,7 @@ func (b *evmBridger) makeWitdrawTx(
 		}
 
 		call = func() (*types.Transaction, error) {
-			return bridge.BridgeTransactor.WithdrawNative(
+			return bridger.BridgeTransactor.WithdrawNative(
 				opts,
 				tokenData,
 				bundle,
@@ -134,7 +125,7 @@ func (b *evmBridger) makeWitdrawTx(
 		}
 
 		call = func() (*types.Transaction, error) {
-			return bridge.BridgeTransactor.WithdrawERC20(
+			return bridger.BridgeTransactor.WithdrawERC20(
 				opts,
 				tokenData,
 				bundle,
@@ -160,7 +151,7 @@ func (b *evmBridger) makeWitdrawTx(
 		}
 
 		call = func() (*types.Transaction, error) {
-			return bridge.BridgeTransactor.WithdrawERC721(
+			return bridger.BridgeTransactor.WithdrawERC721(
 				opts,
 				tokenData,
 				bundle,
@@ -186,7 +177,7 @@ func (b *evmBridger) makeWitdrawTx(
 		}
 
 		call = func() (*types.Transaction, error) {
-			return bridge.BridgeTransactor.WithdrawERC1155(
+			return bridger.BridgeTransactor.WithdrawERC1155(
 				opts,
 				tokenData,
 				bundle,
@@ -208,7 +199,7 @@ func (b *evmBridger) makeWitdrawTx(
 	return chain, tx, nil
 }
 
-func (b *evmBridger) getSavedEstimate(ctx context.Context, transferID string) (*bridger.FeeEstimate, error) {
+func (b *evmBridger) getSavedEstimate(ctx context.Context, transferID string) (*bridge.FeeEstimate, error) {
 	resp := b.redis.Get(ctx, transferID)
 	if resp.Err() == redis.Nil {
 		return nil, nil
@@ -221,7 +212,7 @@ func (b *evmBridger) getSavedEstimate(ctx context.Context, transferID string) (*
 		return nil, errors.Wrap(err, "failed to read estimate from redis")
 	}
 
-	var estimate bridger.FeeEstimate
+	var estimate bridge.FeeEstimate
 	if err := json.Unmarshal(raw, &estimate); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal estimate")
 	}
@@ -229,7 +220,7 @@ func (b *evmBridger) getSavedEstimate(ctx context.Context, transferID string) (*
 	return &estimate, nil
 }
 
-func (b *evmBridger) saveEstimate(ctx context.Context, estimate *bridger.FeeEstimate) error {
+func (b *evmBridger) saveEstimate(ctx context.Context, estimate *bridge.FeeEstimate) error {
 	raw, err := json.Marshal(estimate)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal estimate")
@@ -247,6 +238,13 @@ func (b *evmBridger) Withdraw(
 	transfer core.TransferDetails,
 ) error {
 	log := b.log.WithField("op_id", transfer.Origin)
+	withdrawn, err := b.isAlreadyWithdrawn(ctx, transfer)
+	if err != nil {
+		return errors.Wrap(err, "failed to check if the transfer was already withdrawn")
+	}
+	if withdrawn {
+		return bridge.ErrAlreadyWithdrawn
+	}
 
 	chain, tx, err := b.makeWitdrawTx(ctx, transfer, false)
 	if err != nil {
@@ -279,10 +277,18 @@ func (b *evmBridger) Withdraw(
 func (b *evmBridger) EstimateRelayFee(
 	ctx context.Context,
 	transfer core.TransferDetails,
-) (bridger.FeeEstimate, error) {
+) (bridge.FeeEstimate, error) {
+	withdrawn, err := b.isAlreadyWithdrawn(ctx, transfer)
+	if err != nil {
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to check if the transfer was already withdrawn")
+	}
+	if withdrawn {
+		return bridge.FeeEstimate{}, bridge.ErrAlreadyWithdrawn
+	}
+
 	estimate, err := b.getSavedEstimate(ctx, transfer.Origin)
 	if err != nil {
-		return bridger.FeeEstimate{}, errors.Wrap(err, "failed to get saved estimate")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get saved estimate")
 	}
 	if estimate != nil {
 		return *estimate, nil
@@ -290,23 +296,23 @@ func (b *evmBridger) EstimateRelayFee(
 
 	chain, tx, err := b.makeWitdrawTx(ctx, transfer, true)
 	if err != nil {
-		return bridger.FeeEstimate{}, errors.Wrap(err, "failed to call the withdraw method")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to call the withdraw method")
 	}
 
 	chainParams, err := getChainParams(transfer.Transfer.ToChain)
 	if err != nil {
-		return bridger.FeeEstimate{}, errors.Wrap(err, "failed to get the chain params")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get the chain params")
 	}
 
 	bn, err := chain.RPC.BlockNumber(ctx)
 	if err != nil {
-		return bridger.FeeEstimate{}, errors.Wrap(err, "failed to get the block number")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get the block number")
 	}
 
 	bignumBn := big.NewInt(0).SetUint64(bn)
 	block, err := chain.RPC.BlockByNumber(ctx, bignumBn)
 	if err != nil {
-		return bridger.FeeEstimate{}, errors.Wrap(err, "failed to get the block")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get the block")
 	}
 
 	var baseFee *big.Int
@@ -318,7 +324,7 @@ func (b *evmBridger) EstimateRelayFee(
 	case chains.AvalancheMainnet, chains.Fuji:
 		baseFee, err = chain.AvalancheRPC().EstimateBaseFee(ctx)
 		if err != nil {
-			return bridger.FeeEstimate{}, errors.Wrap(err, "failed to get the avalanche base fee")
+			return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get the avalanche base fee")
 		}
 	default:
 		baseFee = misc.CalcBaseFee(chainParams, block.Header())
@@ -326,7 +332,7 @@ func (b *evmBridger) EstimateRelayFee(
 
 	msg, err := tx.AsMessage(types.LatestSigner(chainParams), baseFee)
 	if err != nil {
-		return bridger.FeeEstimate{}, errors.Wrap(err, "failed to get the message")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get the message")
 	}
 
 	callMsg := ethereum.CallMsg{
@@ -352,17 +358,18 @@ func (b *evmBridger) EstimateRelayFee(
 	totalGasPrice := big.NewInt(0).Mul(gasPrice, big.NewInt(0).SetUint64(gasEstimate))
 	fee, err := b.calcFee(ctx, chain, totalGasPrice)
 	if err != nil {
-		return bridger.FeeEstimate{}, errors.Wrap(err, "failed to calculate the fee")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to calculate the fee")
 	}
 
+	tollbooth := b.tollbooth.GetEVMConfig(transfer.Transfer.ToChain)
 	createdAt := time.Now()
-	feeEstimate := bridger.FeeEstimate{
+	feeEstimate := bridge.FeeEstimate{
 		TransferID:      transfer.Transfer.Origin,
 		GasEstimate:     totalGasPrice,
-		GasToken:        chain.GasToken,
+		GasToken:        tollbooth.GasTokenTicker,
 		FeeAmount:       fee,
-		FeeToken:        chain.RelayFeeToken,
-		FeeTokenAddress: chain.RelayFeeTokenAddress.Hex(),
+		FeeToken:        b.tollbooth.FeeTokenTicker,
+		FeeTokenAddress: tollbooth.FeeTokenAddress.Hex(),
 		FromChain:       transfer.Transfer.FromChain,
 		ToChain:         transfer.Transfer.ToChain,
 		CreatedAt:       createdAt,
@@ -370,7 +377,7 @@ func (b *evmBridger) EstimateRelayFee(
 	}
 
 	if err := b.saveEstimate(ctx, &feeEstimate); err != nil {
-		return bridger.FeeEstimate{}, errors.Wrap(err, "failed to save the estimate")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to save the estimate")
 	}
 
 	return feeEstimate, nil
@@ -530,11 +537,12 @@ func (b *evmBridger) calcFee(
 	var pool uniswap.Pool
 	var err error
 
-	if chain.UseUniswapV2 {
+	tollbooth := b.tollbooth.GetEVMConfig(chain.Name)
+	if tollbooth.UseUniswapV2 {
 		pool, err = uniswap.NewPoolV2(
 			b.log.WithField("chain", chain.Name),
 			chain.RPC,
-			chain.UniswapPoolAddress,
+			tollbooth.UniswapPoolAddress,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get the uniswap pool")
@@ -543,14 +551,14 @@ func (b *evmBridger) calcFee(
 		pool, err = uniswap.NewPoolV3(
 			b.log.WithField("chain", chain.Name),
 			chain.RPC,
-			chain.UniswapPoolAddress,
+			tollbooth.UniswapPoolAddress,
 		)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get the uniswap pool")
 		}
 	}
 
-	converted, err := pool.Convert(ctx, chain.RelayFeeTokenAddress, chain.GasTokenAddress, gasEstimate)
+	converted, err := pool.Convert(ctx, tollbooth.FeeTokenAddress, tollbooth.WrappedGasTokenAddress, gasEstimate)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert gas estimate to relay fee token")
 	}
@@ -561,4 +569,25 @@ func (b *evmBridger) calcFee(
 	}
 
 	return converted, nil
+}
+
+func (b *evmBridger) isAlreadyWithdrawn(
+	ctx context.Context,
+	transfer core.TransferDetails,
+) (bool, error) {
+	chain := b.mustGetChain(transfer.Transfer.ToChain)
+	bridger, err := evmbind.NewBridge(chain.BridgeAddress, chain.RPC)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to make an instance of ethereum bridger")
+	}
+
+	withdrawn, err := bridger.BridgeCaller.UsedHashes(
+		&bind.CallOpts{Pending: false, Context: ctx},
+		utils.ToByte32(hexutil.MustDecode(transfer.Origin)),
+	)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to check if the transfer was already withdrawn")
+	}
+
+	return withdrawn, nil
 }

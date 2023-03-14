@@ -16,14 +16,18 @@ const (
 	AvalancheMainnet = "Avalanche"
 	Fuji             = "Fuji"
 
-	SolanaMainnet = "Solana"
-	NearMainnet   = "Near"
+	Solana = "Solana"
+	Near   = "Near"
 )
 
 var Chains = []string{
-	EthereumMainnet, Goerli, Sepolia, MaticMainnet, Mumbai, BSCMainnet, Chapel, AvalancheMainnet, Fuji, SolanaMainnet, NearMainnet,
+	EthereumMainnet, Goerli, Sepolia, MaticMainnet, Mumbai, BSCMainnet, Chapel, AvalancheMainnet, Fuji, Solana, Near,
+}
+
+var evmChains = []string{
+	EthereumMainnet, Goerli, Sepolia, MaticMainnet, Mumbai, BSCMainnet, Chapel, AvalancheMainnet, Fuji,
 }
 
 func IsEVM(chain string) bool {
-	return slices.Contains(Chains, chain)
+	return slices.Contains(evmChains, chain)
 }

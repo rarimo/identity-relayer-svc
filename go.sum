@@ -1021,6 +1021,8 @@ gitlab.com/rarimo/rarimo-core v0.0.0-20221212134410-6f432204ebb5 h1:UimqiqyL09Mm
 gitlab.com/rarimo/rarimo-core v0.0.0-20221212134410-6f432204ebb5/go.mod h1:FKFD0Q2YVQ1d3JXyHJtzbqmW479LJSHb1V6nZBzr5RA=
 gitlab.com/rarimo/solana-program-go v0.0.0-20221213131545-b132d8f4bb2a h1:01s65Gbi7yQL0r1ZbdM6kMSxf7nrFNg72UPPHolk2WE=
 gitlab.com/rarimo/solana-program-go v0.0.0-20221213131545-b132d8f4bb2a/go.mod h1:Fivs168ovoGl0rvOb2HIfwRPebK4i7EDJrcHxguT4gw=
+gitlab.com/rarimo/solana-program-go v0.0.0-20230201224846-2c5bbd4bec31 h1:AhpTT0mx68ks1jzudWIRLVp01seX/zScGzvi/iEWjrM=
+gitlab.com/rarimo/solana-program-go v0.0.0-20230201224846-2c5bbd4bec31/go.mod h1:Fivs168ovoGl0rvOb2HIfwRPebK4i7EDJrcHxguT4gw=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.5/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=

@@ -34,7 +34,7 @@ require (
 
 require (
 	github.com/ava-labs/subnet-evm v0.2.4
-	gitlab.com/rarimo/solana-program-go v0.0.0-20221213131545-b132d8f4bb2a
+	gitlab.com/rarimo/solana-program-go v0.0.0-20230201224846-2c5bbd4bec31
 )
 
 require (
