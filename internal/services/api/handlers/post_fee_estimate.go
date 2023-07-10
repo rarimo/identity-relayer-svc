@@ -65,7 +65,7 @@ func PostFeeEstimate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bridgerProvider := bridger.NewBridgerProvider(Config(r))
-	b := bridgerProvider.GetBridger(transfer.Transfer.ToChain)
+	b := bridgerProvider.GetBridger(transfer.Transfer.To.Chain)
 
 	feeEstimate, err := b.EstimateRelayFee(r.Context(), *transfer)
 	if errors.Cause(err) == bridge.ErrAlreadyWithdrawn {

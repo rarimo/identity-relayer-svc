@@ -65,23 +65,47 @@ func (c *core) GetTransfers(ctx context.Context, confirmationID string) ([]Trans
 			return nil, errors.Wrap(err, "failed to unmarshal the transfer")
 		}
 
-		token, err := c.tm.Info(ctx, &tokenmanager.QueryGetInfoRequest{Index: transfer.TokenIndex})
-		if err != nil {
-			return nil, errors.Wrap(err, "error getting token info entry")
-		}
-
-		tokenDetails, err := c.tm.Item(ctx, &tokenmanager.QueryGetItemRequest{
-			TokenAddress: token.Info.Chains[transfer.ToChain].TokenAddress,
-			TokenId:      token.Info.Chains[transfer.ToChain].TokenId,
-			Chain:        transfer.ToChain,
+		item, err := c.tm.ItemByOnChainItem(ctx, &tokenmanager.QueryGetItemByOnChainItemRequest{
+			Chain:   transfer.From.Chain,
+			Address: transfer.From.Address,
+			TokenID: transfer.From.TokenID,
 		})
 		if err != nil {
-			return nil, errors.Wrap(err, "error getting token item entry")
+			return nil, errors.Wrap(err, "error getting item entry")
+		}
+
+		collection, err := c.tm.Collection(ctx, &tokenmanager.QueryGetCollectionRequest{
+			Index: item.Item.Collection,
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting collection entry")
+		}
+
+		collectionData, err := c.tm.CollectionData(ctx, &tokenmanager.QueryGetCollectionDataRequest{
+			Chain:   transfer.From.Chain,
+			Address: transfer.From.Address,
+		})
+		if err != nil {
+			return nil, errors.Wrap(err, "error getting collection data entry")
+		}
+
+		var netParams *tokenmanager.NetworkParams
+		for _, net := range networks.Params.Networks {
+			if net.Name == transfer.From.Chain {
+				netParams = net
+				break
+			}
+		}
+
+		if netParams == nil {
+			return nil, errors.Wrap(err, "no network params found")
 		}
 
 		content, err := pkg.GetTransferContent(
-			&tokenDetails.Item,
-			networks.Params.Networks[transfer.ToChain],
+			collection.Collection,
+			collectionData.Data,
+			item.Item,
+			*netParams,
 			&transfer,
 		)
 		if err != nil {
@@ -91,11 +115,11 @@ func (c *core) GetTransfers(ctx context.Context, confirmationID string) ([]Trans
 		operations = append(operations, content)
 
 		transfers = append(transfers, TransferDetails{
-			Transfer:     transfer,
-			Token:        token.Info,
-			TokenDetails: tokenDetails.Item,
-			Signature:    confirmation.SignatureECDSA,
-			Origin:       hexutil.Encode(content.Origin[:]),
+			Transfer:      transfer,
+			DstCollection: collectionData.Data,
+			Item:          item.Item,
+			Signature:     confirmation.SignatureECDSA,
+			Origin:        hexutil.Encode(content.Origin[:]),
 		})
 	}
 

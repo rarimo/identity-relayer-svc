@@ -91,7 +91,7 @@ func (c *relayerConsumer) Consume(delivery rmq.Delivery) {
 	var task data.RelayTask
 	task.Unmarshal(delivery.Payload())
 
-	if err := c.processTransfer(task); err != nil {
+	if err := c.processOperation(task); err != nil {
 		c.log.WithError(err).WithField("transfer_id", task.OperationIndex).Error("failed to process transfer")
 		mustReject(delivery)
 		c.mustScheduleRetry(task)
@@ -103,71 +103,88 @@ func (c *relayerConsumer) Consume(delivery rmq.Delivery) {
 	}
 }
 
-func (c *relayerConsumer) processTransfer(task data.RelayTask) error {
+func (c *relayerConsumer) processOperation(task data.RelayTask) error {
 	log := c.log.WithField("op_id", task.OperationIndex)
 
-	log.Info("processing a transfer")
+	log.Info("processing operation")
 	operation, err := c.rarimocore.Operation(context.TODO(), &rarimocore.QueryGetOperationRequest{Index: task.OperationIndex})
 	if err != nil {
-		return errors.Wrap(err, "failed to get the transfer")
+		return errors.Wrap(err, "failed to get the operation")
 	}
-	if !operation.Operation.Signed {
-		return errors.New("transfer is not signed yet")
+	if operation.Operation.Status != rarimocore.OpStatus_SIGNED {
+		return errors.New("operation is not signed yet")
 	}
+
+	switch operation.Operation.OperationType {
+	case rarimocore.OpType_TRANSFER:
+		return c.processTransfer(task, operation.Operation.Details.Value)
+	//case rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER:
+	//	return c.processIdentityDefaultTransfer(task, operation.Operation.Details.Value)
+	default:
+		return fmt.Errorf("unknown operation type %s", operation.Operation.OperationType)
+	}
+}
+
+func (c *relayerConsumer) processTransfer(task data.RelayTask, raw []byte) error {
 	transfer := rarimocore.Transfer{}
-	if err := transfer.Unmarshal(operation.Operation.Details.Value); err != nil {
+	if err := transfer.Unmarshal(raw); err != nil {
 		return errors.Wrap(err, "failed to unmarshal  transfer")
 	}
 
-	tokenInfo, err := c.tokenmanager.Info(context.TODO(), &tokenmanager.QueryGetInfoRequest{Index: transfer.TokenIndex})
+	dstItem, err := c.tokenmanager.ItemByOnChainItem(context.TODO(),
+		&tokenmanager.QueryGetItemByOnChainItemRequest{
+			Chain:   transfer.To.Chain,
+			Address: transfer.To.Address,
+			TokenID: transfer.To.TokenID,
+		})
 	if err != nil {
-		return errors.Wrap(err, "failed to get token info")
-	}
-	token, found := tokenInfo.Info.Chains[transfer.ToChain]
-	if !found {
-		return fmt.Errorf("unknown toChain = %s", transfer.ToChain)
-	}
-	tokenDetails, err := c.tokenmanager.Item(context.TODO(), &tokenmanager.QueryGetItemRequest{
-		TokenAddress: token.TokenAddress,
-		TokenId:      token.TokenId,
-		Chain:        transfer.ToChain,
-	})
-	if err != nil {
-		return errors.Wrap(err, "failed to get token details")
+		return errors.Wrap(err, "failed to get dst item info")
 	}
 
-	network, err := c.tokenmanager.Params(context.TODO(), new(tokenmanager.QueryParamsRequest))
+	collectionData, err := c.tokenmanager.CollectionData(context.TODO(),
+		&tokenmanager.QueryGetCollectionDataRequest{
+			Chain:   transfer.To.Chain,
+			Address: transfer.To.Address,
+		})
 	if err != nil {
-		return errors.Wrap(err, "error getting network info entry")
+		return errors.Wrap(err, "failed to get collection data")
+	}
+
+	collection, err := c.tokenmanager.Collection(context.TODO(),
+		&tokenmanager.QueryGetCollectionRequest{
+			Index: collectionData.Data.Collection,
+		})
+	if err != nil {
+		return errors.Wrap(err, "failed to get collection")
 	}
 
 	transferDetails := core.TransferDetails{
-		Transfer:     transfer,
-		Token:        tokenInfo.Info,
-		TokenDetails: tokenDetails.Item,
-		Signature:    task.Signature,
-		Origin:       task.Origin,
-		MerklePath:   task.MustParseMerklePath(),
+		Transfer:      transfer,
+		DstCollection: collectionData.Data,
+		Item:          dstItem.Item,
+		Signature:     task.Signature,
+		Origin:        task.Origin,
+		MerklePath:    task.MustParseMerklePath(),
 	}
 
-	log.
+	c.log.
 		WithFields(logan.F{
 			"to":         transfer.Receiver,
-			"token_type": tokenDetails.Item.TokenType,
-			"to_chain":   transfer.ToChain,
+			"token_type": collectionData.Data.TokenType,
+			"to_chain":   transfer.To.Chain,
 		}).
 		Info("relaying a transfer")
 
 	switch {
-	case transfer.ToChain == types.Near:
-		err = c.processNearTransfer(task, transfer, *token, tokenDetails.Item, network.Params)
+	case transfer.To.Chain == types.Near:
+		err = c.processNearTransfer(task, transfer, dstItem.Item, collectionData.Data, collection.Collection.Meta)
 	default:
-		bridger := c.bridgerProvider.GetBridger(transfer.ToChain)
+		bridger := c.bridgerProvider.GetBridger(transfer.To.Chain)
 		err = bridger.Withdraw(context.Background(), transferDetails)
 	}
 
 	if errors.Cause(err) == bridge.ErrAlreadyWithdrawn {
-		log.Info("transfer was already withdrawn")
+		c.log.Info("transfer has already been withdrawn")
 		return nil
 	}
 	if err != nil {

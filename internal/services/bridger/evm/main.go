@@ -58,7 +58,7 @@ func (b *evmBridger) makeWitdrawTx(
 	transfer core.TransferDetails,
 	simulation bool,
 ) (*config.EVMChain, *types.Transaction, error) {
-	chain := b.mustGetChain(transfer.Transfer.ToChain)
+	chain := b.mustGetChain(transfer.Transfer.To.Chain)
 	bridger, err := evmbind.NewBridge(chain.BridgeAddress, chain.RPC)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to make an instance of ethereum bridger")
@@ -101,7 +101,7 @@ func (b *evmBridger) makeWitdrawTx(
 	opts.GasLimit = uint64(300000)
 
 	var call func() (*types.Transaction, error)
-	switch transfer.TokenDetails.TokenType {
+	switch transfer.DstCollection.TokenType {
 	case tokenmanager.Type_NATIVE:
 		tokenData, err := nativeABI.Pack(amount)
 		if err != nil {
@@ -119,7 +119,7 @@ func (b *evmBridger) makeWitdrawTx(
 			)
 		}
 	case tokenmanager.Type_ERC20:
-		tokenData, err := erc20ABI.Pack(common.HexToAddress(transfer.TokenDetails.TokenAddress), amount)
+		tokenData, err := erc20ABI.Pack(common.HexToAddress(transfer.Transfer.To.Address), amount)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to ABI encode token data")
 		}
@@ -132,19 +132,19 @@ func (b *evmBridger) makeWitdrawTx(
 				origin,
 				receiver,
 				proof,
-				transfer.TokenDetails.Wrapped,
+				transfer.DstCollection.Wrapped,
 			)
 		}
 	case tokenmanager.Type_ERC721:
-		tokenID, err := parseTokenID(transfer.TokenDetails.TokenId)
+		tokenID, err := parseTokenID(transfer.Transfer.To.TokenID)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to parse the tokenID")
 		}
 
 		tokenData, err := erc721ABI.Pack(
-			common.HexToAddress(transfer.TokenDetails.TokenAddress),
+			common.HexToAddress(transfer.Transfer.To.Address),
 			tokenID,
-			transfer.TokenDetails.Uri,
+			transfer.Item.Meta.Uri,
 		)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to ABI encode token data")
@@ -158,18 +158,18 @@ func (b *evmBridger) makeWitdrawTx(
 				origin,
 				receiver,
 				proof,
-				transfer.TokenDetails.Wrapped,
+				transfer.DstCollection.Wrapped,
 			)
 		}
 	case tokenmanager.Type_ERC1155:
-		tokenID, err := parseTokenID(transfer.TokenDetails.TokenId)
+		tokenID, err := parseTokenID(transfer.Transfer.To.TokenID)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to parse the tokenID")
 		}
 		tokenData, err := erc1155ABI.Pack(
-			common.HexToAddress(transfer.TokenDetails.TokenAddress),
+			common.HexToAddress(transfer.Transfer.To.Address),
 			tokenID,
-			transfer.TokenDetails.Uri,
+			transfer.Item.Meta.Uri,
 			amount,
 		)
 		if err != nil {
@@ -184,11 +184,11 @@ func (b *evmBridger) makeWitdrawTx(
 				origin,
 				receiver,
 				proof,
-				transfer.TokenDetails.Wrapped,
+				transfer.DstCollection.Wrapped,
 			)
 		}
 	default:
-		return nil, nil, errors.Errorf("token type %d is not supported", transfer.TokenDetails.TokenType)
+		return nil, nil, errors.Errorf("token type %d is not supported", transfer.DstCollection.TokenType)
 	}
 
 	tx, err := call()
@@ -258,7 +258,7 @@ func (b *evmBridger) Withdraw(
 		return errors.Wrap(err, "failed to wait for the transaction to be mined")
 	}
 	if receipt.Status == 0 {
-		log.WithField("receipt", utils.Prettify(receipt)).Errorf("%s transaction failed", transfer.Transfer.ToChain)
+		log.WithField("receipt", utils.Prettify(receipt)).Errorf("%s transaction failed", transfer.Transfer.To.Chain)
 		return errors.New("transaction failed")
 	}
 
@@ -299,7 +299,7 @@ func (b *evmBridger) EstimateRelayFee(
 		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to call the withdraw method")
 	}
 
-	chainParams, err := getChainParams(transfer.Transfer.ToChain)
+	chainParams, err := getChainParams(transfer.Transfer.To.Chain)
 	if err != nil {
 		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get the chain params")
 	}
@@ -316,7 +316,7 @@ func (b *evmBridger) EstimateRelayFee(
 	}
 
 	var baseFee *big.Int
-	switch transfer.Transfer.ToChain {
+	switch transfer.Transfer.To.Chain {
 	case chains.MaticMainnet, chains.Mumbai:
 		baseFee = calculatePolygonBaseFee(chainParams, block.Header())
 	case chains.BSCMainnet, chains.Chapel:
@@ -347,12 +347,12 @@ func (b *evmBridger) EstimateRelayFee(
 
 	gasEstimate, err := chain.RPC.EstimateGas(ctx, callMsg)
 	if err != nil {
-		errors.Wrap(err, "failed to get the gas estimate")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get the gas estimate")
 	}
 
 	gasPrice, err := chain.RPC.SuggestGasPrice(ctx)
 	if err != nil {
-		errors.Wrap(err, "failed to get the gas price")
+		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to get the gas price")
 	}
 
 	totalGasPrice := big.NewInt(0).Mul(gasPrice, big.NewInt(0).SetUint64(gasEstimate))
@@ -361,7 +361,7 @@ func (b *evmBridger) EstimateRelayFee(
 		return bridge.FeeEstimate{}, errors.Wrap(err, "failed to calculate the fee")
 	}
 
-	tollbooth := b.tollbooth.GetEVMConfig(transfer.Transfer.ToChain)
+	tollbooth := b.tollbooth.GetEVMConfig(transfer.Transfer.To.Chain)
 	createdAt := time.Now()
 	feeEstimate := bridge.FeeEstimate{
 		TransferID:      transfer.Transfer.Origin,
@@ -370,8 +370,8 @@ func (b *evmBridger) EstimateRelayFee(
 		FeeAmount:       fee,
 		FeeToken:        b.tollbooth.FeeTokenTicker,
 		FeeTokenAddress: tollbooth.FeeTokenAddress.Hex(),
-		FromChain:       transfer.Transfer.FromChain,
-		ToChain:         transfer.Transfer.ToChain,
+		FromChain:       transfer.Transfer.From.Chain,
+		ToChain:         transfer.Transfer.To.Chain,
 		CreatedAt:       createdAt,
 		ExpiresAt:       createdAt.Add(evmEstimateTTLMinutes * time.Minute),
 	}
@@ -575,7 +575,7 @@ func (b *evmBridger) isAlreadyWithdrawn(
 	ctx context.Context,
 	transfer core.TransferDetails,
 ) (bool, error) {
-	chain := b.mustGetChain(transfer.Transfer.ToChain)
+	chain := b.mustGetChain(transfer.Transfer.To.Chain)
 	bridger, err := evmbind.NewBridge(chain.BridgeAddress, chain.RPC)
 	if err != nil {
 		return false, errors.Wrap(err, "failed to make an instance of ethereum bridger")

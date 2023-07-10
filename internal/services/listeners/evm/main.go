@@ -178,7 +178,7 @@ func (l *evmListener) handleFeePaid(ctx context.Context, e *gobind.TollboothFeeP
 	if err != nil {
 		return 0, errors.Wrap(err, "failed to get transfer")
 	}
-	targetBridger := l.bridgerProvider.GetBridger(transfer.Transfer.ToChain)
+	targetBridger := l.bridgerProvider.GetBridger(transfer.Transfer.To.Chain)
 	estimate, err := targetBridger.EstimateRelayFee(ctx, *transfer)
 	if errors.Cause(err) == bridge.ErrAlreadyWithdrawn {
 		l.log.Info("transfer already withdrawn, skipping")

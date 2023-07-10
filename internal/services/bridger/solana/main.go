@@ -120,8 +120,8 @@ func (b *solanaBridger) EstimateRelayFee(
 		FeeAmount:       b.tollbooth.Solana.RelayFee,
 		FeeToken:        b.tollbooth.FeeTokenTicker,
 		FeeTokenAddress: b.tollbooth.Solana.FeeTokenMint.String(),
-		FromChain:       transfer.Transfer.FromChain,
-		ToChain:         transfer.Transfer.ToChain,
+		FromChain:       transfer.Transfer.From.Chain,
+		ToChain:         transfer.Transfer.To.Chain,
 		CreatedAt:       createdAt,
 		ExpiresAt:       createdAt.Add(solanaEstimateTTLMinutes * time.Minute),
 	}
@@ -160,7 +160,7 @@ func (b *solanaBridger) makeWitdrawTx(
 	}
 
 	var instruction solana.Instruction
-	switch transfer.TokenDetails.TokenType {
+	switch transfer.DstCollection.TokenType {
 	case tokenmanager.Type_NATIVE:
 		instruction, err = contract.WithdrawNativeInstruction(
 			b.solana.BridgeProgramID,
@@ -170,7 +170,7 @@ func (b *solanaBridger) makeWitdrawTx(
 			args,
 		)
 	case tokenmanager.Type_METAPLEX_FT:
-		tokenAddress := hexutil.MustDecode(transfer.TokenDetails.TokenAddress)
+		tokenAddress := hexutil.MustDecode(transfer.Transfer.To.Address)
 		instruction, err = contract.WithdrawFTInstruction(
 			b.solana.BridgeProgramID,
 			b.solana.BridgeAdmin,
@@ -180,7 +180,7 @@ func (b *solanaBridger) makeWitdrawTx(
 			args,
 		)
 	case tokenmanager.Type_METAPLEX_NFT:
-		tokenID := hexutil.MustDecode(transfer.TokenDetails.TokenId)
+		tokenID := hexutil.MustDecode(transfer.Transfer.To.TokenID)
 		instruction, err = contract.WithdrawNFTInstruction(
 			b.solana.BridgeProgramID,
 			b.solana.BridgeAdmin,
@@ -190,7 +190,7 @@ func (b *solanaBridger) makeWitdrawTx(
 			args,
 		)
 	default:
-		return nil, errors.Errorf("invalid solana token type: %d", transfer.TokenDetails.TokenType)
+		return nil, errors.Errorf("invalid solana token type: %d", transfer.DstCollection.TokenType)
 	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to construct the solana instruction")

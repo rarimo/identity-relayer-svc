@@ -6,10 +6,10 @@ import (
 )
 
 type TransferDetails struct {
-	Transfer     rarimocore.Transfer
-	Token        tokenmanager.Info
-	TokenDetails tokenmanager.Item
-	Signature    string
-	Origin       string
-	MerklePath   [][32]byte
+	Transfer      rarimocore.Transfer
+	DstCollection tokenmanager.CollectionData
+	Item          tokenmanager.Item
+	Signature     string
+	Origin        string
+	MerklePath    [][32]byte
 }
