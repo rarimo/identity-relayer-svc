@@ -42,10 +42,6 @@ type scheduler struct {
 	relayQueue   rmq.Queue
 }
 
-func NewScheduler(cfg config.Config) Scheduler {
-	return newScheduler(cfg)
-}
-
 func newScheduler(cfg config.Config) *scheduler {
 	return &scheduler{
 		client:       cfg.Tendermint(),
@@ -118,7 +114,8 @@ func (s *scheduler) ScheduleRelays(
 	log := s.log.WithField("merkle_root", confirmationID)
 	log.Info("processing a confirmation")
 
-	tasks := make([]data.RelayTask, 0, len(operationIndexes))
+	rawTasks := [][]byte{}
+
 	for _, index := range operationIndexes {
 		operation, err := s.rarimocore.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: index})
 		if err != nil {
@@ -126,20 +123,6 @@ func (s *scheduler) ScheduleRelays(
 		}
 
 		switch operation.Operation.OperationType {
-		case rarimocore.OpType_TRANSFER:
-			transfer, err := s.core.GetTransfer(ctx, confirmationID, operation.Operation.Index)
-			if err != nil {
-				return errors.Wrap(err, "failed to get transfer", logan.F{
-					"confirmation_id": confirmationID,
-					"operation_index": operation.Operation.Index,
-				})
-			}
-
-			if !slices.Contains(operationIndexes, transfer.Transfer.Origin) {
-				continue
-			}
-
-			tasks = append(tasks, data.NewRelayTransferTask(*transfer, relayer.MaxRetries))
 		case rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER:
 			transfer, err := s.core.GetIdentityDefaultTransfer(ctx, confirmationID, operation.Operation.Index)
 			if err != nil {
@@ -152,14 +135,8 @@ func (s *scheduler) ScheduleRelays(
 			if !slices.Contains(operationIndexes, transfer.OpIndex) {
 				continue
 			}
-			tasks = append(tasks, data.NewRelayIdentityTransferTask(*transfer, relayer.MaxRetries))
-		}
-	}
 
-	rawTasks := [][]byte{}
-	for _, task := range tasks {
-		if slices.Contains(operationIndexes, task.OperationIndex) {
-			rawTasks = append(rawTasks, task.Marshal())
+			rawTasks = append(rawTasks, data.NewRelayIdentityTransferTask(*transfer, relayer.MaxRetries).Marshal())
 		}
 	}
 

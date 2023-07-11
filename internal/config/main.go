@@ -16,9 +16,6 @@ type Config interface {
 	Tenderminter
 	Cosmoser
 	EVMer
-	Solaner
-	Nearer
-	Tollboother
 }
 
 type config struct {
@@ -30,9 +27,6 @@ type config struct {
 	Tenderminter
 	Cosmoser
 	EVMer
-	Solaner
-	Nearer
-	Tollboother
 }
 
 func New(getter kv.Getter) Config {
@@ -46,8 +40,5 @@ func New(getter kv.Getter) Config {
 		Tenderminter: NewTenderminter(getter),
 		Cosmoser:     NewCosmoser(getter),
 		EVMer:        NewEVMer(getter),
-		Solaner:      NewSolaner(getter),
-		Nearer:       NewNearer(getter),
-		Tollboother:  NewTollboother(getter),
 	}
 }
