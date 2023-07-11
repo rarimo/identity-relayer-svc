@@ -141,10 +141,7 @@ func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byt
 	opts.GasPrice = gasPrice
 	opts.GasLimit = uint64(300000)
 
-	replacedState, err := hexutil.DecodeBig(transfer.ReplacedStateHash)
-	if err != nil {
-		return errors.Wrap(err, "failed to decode replaced state hash")
-	}
+	replacedState := new(big.Int).SetBytes(hexutil.MustDecode(transfer.ReplacedStateHash))
 
 	stateInfo, err := getStateInfo(transfer)
 	if err != nil {
@@ -192,20 +189,11 @@ func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byt
 }
 
 func getStateInfo(transfer rarimocore.IdentityDefaultTransfer) (state contracts.IStateStateInfo, err error) {
-	state.Id, err = hexutil.DecodeBig(transfer.Id)
-	if err != nil {
-		return contracts.IStateStateInfo{}, errors.Wrap(err, "failed to decode issuer ID")
-	}
+	state.Id = new(big.Int).SetBytes(hexutil.MustDecode(transfer.Id))
 
-	state.State, err = hexutil.DecodeBig(transfer.StateHash)
-	if err != nil {
-		return contracts.IStateStateInfo{}, errors.Wrap(err, "failed to decode state hash")
-	}
+	state.State = new(big.Int).SetBytes(hexutil.MustDecode(transfer.StateHash))
 
-	state.ReplacedByState, err = hexutil.DecodeBig(transfer.StateReplacedBy)
-	if err != nil {
-		return contracts.IStateStateInfo{}, errors.Wrap(err, "failed to decode replaced state hash")
-	}
+	state.ReplacedByState = new(big.Int).SetBytes(hexutil.MustDecode(transfer.StateReplacedBy))
 
 	var ok bool
 	state.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.StateCreatedAtTimestamp, 10)
@@ -232,15 +220,9 @@ func getStateInfo(transfer rarimocore.IdentityDefaultTransfer) (state contracts.
 }
 
 func getGistRootInfo(transfer rarimocore.IdentityDefaultTransfer) (gistRoot contracts.IStateGistRootInfo, err error) {
-	gistRoot.Root, err = hexutil.DecodeBig(transfer.GISTHash)
-	if err != nil {
-		return contracts.IStateGistRootInfo{}, errors.Wrap(err, "failed to decode GIST hash")
-	}
+	gistRoot.Root = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTHash))
 
-	gistRoot.ReplacedByRoot, err = hexutil.DecodeBig(transfer.GISTReplacedBy)
-	if err != nil {
-		return contracts.IStateGistRootInfo{}, errors.Wrap(err, "failed to decode GIST replaced by hash")
-	}
+	gistRoot.ReplacedByRoot = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTReplacedBy))
 
 	var ok bool
 	gistRoot.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.GISTCreatedAtTimestamp, 10)

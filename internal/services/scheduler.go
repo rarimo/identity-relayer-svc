@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/adjust/rmq/v5"
@@ -66,10 +67,11 @@ func (s *scheduler) run(ctx context.Context) error {
 	out, err := s.client.Subscribe(
 		ctx,
 		"scheduler",
-		"tm.event='Tx' AND message.action='create_confirmation'",
+		"tm.event='Tx' AND operation_signed.operation_type='IDENTITY_DEFAULT_TRANSFER'",
 		DepositChanSize,
 	)
-	s.log.Info("listening for confirmations")
+	s.log.Info("Listening for signed identities")
+
 	if err != nil {
 		return errors.Wrap(err, "can not subscribe")
 	}
@@ -79,28 +81,15 @@ func (s *scheduler) run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case c := <-out:
-			// Delay for indexing tx in core databases
-			time.Sleep(time.Second * 5)
-			tx, err := s.cosmos.GetTx(ctx, &client.GetTxRequest{Hash: c.Events["tx.hash"][0]})
-			if err != nil {
-				s.log.WithError(err).Error("error fetching tx by hash")
-				continue
-			}
+			s.log.Info("New confirmation found")
 
-			for _, message := range tx.Tx.Body.Messages {
-				if message.TypeUrl != "/rarifyprotocol.rarimocore.rarimocore.MsgCreateConfirmation" {
-					continue
-				}
+			index := c.Events[fmt.Sprintf("%s.%s", rarimocore.EventTypeOperationSigned, rarimocore.AttributeKeyOperationId)][0]
+			confirmation := c.Events[fmt.Sprintf("%s.%s", rarimocore.EventTypeOperationSigned, rarimocore.AttributeKeyConfirmationId)][0]
 
-				msg := rarimocore.MsgCreateConfirmation{}
-				if err = msg.Unmarshal(message.Value); err != nil {
-					s.log.WithError(err).Error("failed to unmarshal message")
-					continue
-				}
+			s.log.Infof("New operation found index=%s, conf=%s", index, confirmation)
 
-				if err := s.ScheduleRelays(ctx, msg.Root, msg.Indexes); err != nil {
-					s.log.WithError(err).Error("failed to schedule")
-				}
+			if err := s.ScheduleRelays(ctx, confirmation, []string{index}); err != nil {
+				s.log.WithError(err).Error("failed to schedule")
 			}
 		}
 	}

@@ -23,10 +23,7 @@ func Run(args []string) {
 	defer func() {
 		if rvr := recover(); rvr != nil {
 			logan.New().WithRecover(rvr).Fatal("app panicked")
-
 		}
-		os.Stdout.Sync()
-		os.Stderr.Sync()
 	}()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -34,15 +31,14 @@ func Run(args []string) {
 	cfg := config.New(kv.MustFromEnv())
 	log := cfg.Log()
 
+	log.Info("Running service")
+
 	var wg sync.WaitGroup
 	run := func(f func(config.Config, context.Context)) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer func() {
-				os.Stdout.Sync()
-				os.Stderr.Sync()
-
 				if rvr := recover(); rvr != nil {
 					err := errors.FromPanic(rvr)
 					logan.New().WithError(err).Fatal("one of the services panicked")
