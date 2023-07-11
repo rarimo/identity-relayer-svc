@@ -73,11 +73,17 @@ func Run(cfg config.Config, ctx context.Context) {
 }
 
 func newConsumer(cfg config.Config, id string, chain *config.EVMChain) *relayerConsumer {
+	contract, err := contracts.NewLightweightStateV2(chain.BridgeAddress, chain.RPC)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to instantiate the contract"))
+	}
+
 	return &relayerConsumer{
-		log:         cfg.Log().WithField("service", id),
-		rarimocore:  rarimocore.NewQueryClient(cfg.Cosmos()),
-		targetChain: chain,
-		queue:       cfg.Redis().OpenRelayQueue(),
+		log:               cfg.Log().WithField("service", id),
+		rarimocore:        rarimocore.NewQueryClient(cfg.Cosmos()),
+		targetChain:       chain,
+		stateTransitioner: contract,
+		queue:             cfg.Redis().OpenRelayQueue(),
 	}
 }
 
