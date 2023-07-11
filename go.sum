@@ -858,6 +858,10 @@ gitlab.com/rarimo/near-bridge-go v0.0.0-20221213175033-0dec49a5d160 h1:1Nb6ploaC
 gitlab.com/rarimo/near-bridge-go v0.0.0-20221213175033-0dec49a5d160/go.mod h1:yHEnDq5D/YyTdx4uBKS5o/wLFzlGxC8Yuxa4F3+m4g4=
 gitlab.com/rarimo/rarimo-core v0.0.0-20230706131153-7fb9cdf73ac2 h1:GvCNC0SBITCVG5sKbLRwtKq0nQiVvjuh7PM9KcC+a4s=
 gitlab.com/rarimo/rarimo-core v0.0.0-20230706131153-7fb9cdf73ac2/go.mod h1:jtjUjEZu/v0oSXC6GjpCQhdtfQDnA3ye69/jQqEIr50=
+gitlab.com/rarimo/rarimo-core v0.0.0-20230711153845-3d35c770e221 h1:7dC7Wtq0CRSm2GF3p0vaC78m03WyxHXDCLykRY6UJBI=
+gitlab.com/rarimo/rarimo-core v0.0.0-20230711153845-3d35c770e221/go.mod h1:gu7K/hnfTAHPVzy/kj0r4M6oCuZ70SS96jbnsNekbkc=
+gitlab.com/rarimo/rarimo-core v0.0.0-20230711182420-88754f876a4d h1:T09227lYMU2UX/z6OyVkealSLq4Pe8bTU3YZ6nbw7Z8=
+gitlab.com/rarimo/rarimo-core v0.0.0-20230711182420-88754f876a4d/go.mod h1:gu7K/hnfTAHPVzy/kj0r4M6oCuZ70SS96jbnsNekbkc=
 gitlab.com/rarimo/solana-program-go v0.0.0-20230201224846-2c5bbd4bec31 h1:AhpTT0mx68ks1jzudWIRLVp01seX/zScGzvi/iEWjrM=
 gitlab.com/rarimo/solana-program-go v0.0.0-20230201224846-2c5bbd4bec31/go.mod h1:Fivs168ovoGl0rvOb2HIfwRPebK4i7EDJrcHxguT4gw=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=

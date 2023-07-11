@@ -96,7 +96,12 @@ func (c *core) getTransferContent(op rarimo.Operation) (merkle.Content, error) {
 		return nil, errors.Wrap(err, "error getting network param entry")
 	}
 
-	content, err := pkg.GetTransferContent(collectionResp.Collection, collectionDataResp.Data, itemResp.Item, networkResp.Params, transfer)
+	bridgeparams := networkResp.Params.GetBridgeParams()
+	if err != nil {
+		return nil, errors.New("bridge params not found")
+	}
+
+	content, err := pkg.GetTransferContent(collectionResp.Collection, collectionDataResp.Data, itemResp.Item, bridgeparams, transfer)
 	return content, errors.Wrap(err, "error creating content")
 }
 
@@ -111,7 +116,12 @@ func (c *core) getFeeManagementContent(op rarimo.Operation) (merkle.Content, err
 		return nil, errors.Wrap(err, "error getting network param entry")
 	}
 
-	content, err := pkg.GetFeeTokenManagementContent(networkResp.GetParams(), manage)
+	feeparams := networkResp.Params.GetFeeParams()
+	if err != nil {
+		return nil, errors.New("bridge params not found")
+	}
+
+	content, err := pkg.GetFeeTokenManagementContent(feeparams, manage)
 	return content, errors.Wrap(err, "error creating content")
 }
 

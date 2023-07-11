@@ -26,7 +26,7 @@ require (
 	gitlab.com/rarimo/evm-tollbooth v0.0.0-20230126121110-e2a067393a2d
 	gitlab.com/rarimo/go-merkle v0.0.0-20221212103215-4a9612e1bed1
 	gitlab.com/rarimo/near-bridge-go v0.0.0-20221213175033-0dec49a5d160
-	gitlab.com/rarimo/rarimo-core v0.0.0-20230706131153-7fb9cdf73ac2
+	gitlab.com/rarimo/rarimo-core v0.0.0-20230711182420-88754f876a4d
 	golang.org/x/exp v0.0.0-20230206171751-46f607a40771
 	google.golang.org/grpc v1.55.0
 	lukechampine.com/uint128 v1.2.0

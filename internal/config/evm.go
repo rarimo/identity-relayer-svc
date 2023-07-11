@@ -1,7 +1,6 @@
 package config
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"math/big"
 	"reflect"
@@ -38,7 +37,7 @@ type EVMChain struct {
 	SubmitterAddress    common.Address    `fig:"-"`
 	RPC                 *ethclient.Client `fig:"-"`
 	RPCURL              string            `fig:"rpc,required"`
-	ChainID             *big.Int          `fig:"-"`
+	ChainID             *big.Int          `fig:"chain_id,required"`
 }
 
 func NewEVMer(getter kv.Getter) EVMer {
@@ -116,13 +115,7 @@ func parseEVMChain(value interface{}) ([]EVMChain, error) {
 			return nil, errors.Wrap(err, "failed to dial eth rpc")
 		}
 
-		cID, err := chain.RPC.ChainID(context.TODO())
-		if err != nil {
-			panic(errors.Wrap(err, "failed to get chain id"))
-		}
-		chain.ChainID = cID
 		chain.SubmitterAddress = crypto.PubkeyToAddress(chain.SubmitterPrivateKey.PublicKey)
-
 		chains[idx] = chain
 	}
 
