@@ -39,7 +39,7 @@ type relayer struct {
 type relayerConsumer struct {
 	log               *logan.Entry
 	rarimocore        rarimocore.QueryClient
-	evm               *config.EVM
+	targetChain       *config.EVMChain
 	stateTransitioner StateTransitioner
 	queue             rmq.Queue
 }
@@ -51,13 +51,18 @@ func Run(cfg config.Config, ctx context.Context) {
 		queue: cfg.Redis().OpenRelayQueue(),
 	}
 
+	targetChain, ok := cfg.EVM().GetChainByName(cfg.Relay().TargetChain)
+	if !ok {
+		panic(fmt.Errorf("unknown target chain [%s]", cfg.Relay().TargetChain))
+	}
+
 	if err := r.queue.StartConsuming(prefetchLimit, pollDuration); err != nil {
 		panic(errors.Wrap(err, "failed to start consuming the relay queue"))
 	}
 
 	for i := 0; i < numConsumers; i++ {
 		name := fmt.Sprintf("relay-consumer-%d", i)
-		if _, err := r.queue.AddConsumer(name, newConsumer(cfg, name)); err != nil {
+		if _, err := r.queue.AddConsumer(name, newConsumer(cfg, name, targetChain)); err != nil {
 			panic(err)
 		}
 	}
@@ -67,12 +72,12 @@ func Run(cfg config.Config, ctx context.Context) {
 	r.log.Info("finished consuming relayer queue")
 }
 
-func newConsumer(cfg config.Config, id string) *relayerConsumer {
+func newConsumer(cfg config.Config, id string, chain *config.EVMChain) *relayerConsumer {
 	return &relayerConsumer{
-		log:        cfg.Log().WithField("service", id),
-		rarimocore: rarimocore.NewQueryClient(cfg.Cosmos()),
-		evm:        cfg.EVM(),
-		queue:      cfg.Redis().OpenRelayQueue(),
+		log:         cfg.Log().WithField("service", id),
+		rarimocore:  rarimocore.NewQueryClient(cfg.Cosmos()),
+		targetChain: chain,
+		queue:       cfg.Redis().OpenRelayQueue(),
 	}
 }
 
@@ -123,20 +128,13 @@ func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byt
 		return errors.Wrap(err, "failed to unmarshal identity transfer")
 	}
 
-	chain, ok := c.evm.GetChainByName(transfer.Chain)
-	if !ok {
-		return errors.From(errors.New("unknown chain"), logan.F{
-			"chain": transfer.Chain,
-		})
-	}
-
-	opts := chain.TransactorOpts()
-	nonce, err := chain.RPC.PendingNonceAt(context.TODO(), chain.SubmitterAddress)
+	opts := c.targetChain.TransactorOpts()
+	nonce, err := c.targetChain.RPC.PendingNonceAt(context.TODO(), c.targetChain.SubmitterAddress)
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch a nonce")
 	}
 	opts.Nonce = big.NewInt(int64(nonce))
-	gasPrice, err := chain.RPC.SuggestGasPrice(context.TODO())
+	gasPrice, err := c.targetChain.RPC.SuggestGasPrice(context.TODO())
 	if err != nil {
 		return errors.Wrap(err, "failed to get suggested gas price")
 	}
@@ -166,7 +164,7 @@ func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byt
 
 	c.log.WithField("tx_hash", tx.Hash().Hex()).Debug("state transition tx sent")
 
-	receipt, err := bind.WaitMined(context.Background(), chain.RPC, tx)
+	receipt, err := bind.WaitMined(context.Background(), c.targetChain.RPC, tx)
 	if err != nil {
 		return errors.Wrap(err, "failed to wait for state transition tx")
 	}

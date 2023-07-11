@@ -27,41 +27,5 @@ evm:
       submitter_private_key: "2985033f9d4120e351d087b97257ea7eeeec58c729f59f49c3d73c536f0a50bb"
       rpc: https://goerli.infura.io/v3/2a6a01d5162c45939a09d96bea88d358
 
-solana:
-  rpc: "https://api.devnet.solana.com"
-  ws: "wss://api.devnet.solana.com"
-  bridge_program_id: "GexDbBi7B2UrJDi9JkrWH9fFVhmysN7u5C9zT2HkC6yZ"
-  bridge_admin_seed: "BhBxfhsg2CrckxRKqHJXykLVTSD5LLF8nqNyzXD9idY"
-  submitter_private_key: "4kaCgatohjE7RtkqiPW41Q9Y6CSLZft32Z5ubG5rjWgD2qp9gAmXXQTdMLRM6FT2M7Hc6SeCifd3ShkMw1uwyLnm"
-
-near:
-  rpc: "https://rpc.testnet.near.org"
-  bridge_address: "bridge.napalmpapalam.testnet"
-  submitter_address: "napalmpapalam.testnet"
-  submitter_private_key: "ed25519:uXN1kpbT4jWdnbdsBmh9tu15ARXzdYsYLViqdda3NaT8eHKE9y8tqRd3Hi2jU1HHXK3a91aoBR1PBTsaMFRgAbe"
-
-tollbooth:
-  fee_token_ticker: "USDC"
-  solana:
-    tollbooth_account: "3wsBVZqBRpYuQh2HEh2aLZpeKzUUvqUHeSURxj9MDwDV"
-    gas_token_ticker: "SOL"
-    relay_fee: "1" # $0.01
-    fee_token_mint: "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
-  evm:
-    - chain: "Goerli"
-      tollbooth_address: "0xB216d5e19e0c424F38675e6a093d38d49d773a2A"
-      fee_token_address: "0x07865c6E87B9F70255377e024ace6630C1Eaa37F"
-      uniswap_pool_address: "0x6337B3caf9C5236c7f3D1694410776119eDaF9FA"
-      gas_token_ticker: "ETH"
-      gas_token_address: "0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6"
-    - chain:  "Fuji"
-      tollbooth_address: "0xB216d5e19e0c424F38675e6a093d38d49d773a2A"
-      relay_fee_token: "USDT"
-      fee_token_address: "0x385104afA0BfdAc5A2BcE2E3fae97e96D1CB9160"
-      uniswap_pool_address: "0x2F4183029f88AAB191ACE769Cc3213bff0F8d6C2"
-      gas_token_ticker: "AVAX"
-      gas_token_address: "0x192d396850921dAC27428B84DfDb0402685D4A50"
-      use_uniswap_v2: true
-
-
-
+relay:
+  target_chain: "Goerli"

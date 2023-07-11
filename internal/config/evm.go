@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"reflect"
 
-	avalanche "github.com/ava-labs/subnet-evm/ethclient"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -40,8 +39,6 @@ type EVMChain struct {
 	RPC                 *ethclient.Client `fig:"-"`
 	RPCURL              string            `fig:"rpc,required"`
 	ChainID             *big.Int          `fig:"-"`
-
-	avalancheOnce comfig.Once
 }
 
 func NewEVMer(getter kv.Getter) EVMer {
@@ -74,17 +71,6 @@ func (e *EVMChain) TransactorOpts() *bind.TransactOpts {
 	}
 
 	return t
-}
-
-func (e *EVMChain) AvalancheRPC() avalanche.Client {
-	return e.avalancheOnce.Do(func() interface{} {
-		client, err := avalanche.Dial(e.RPCURL)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to dial avalanche rpc"))
-		}
-
-		return client
-	}).(avalanche.Client)
 }
 
 func (e *EVM) GetChainByName(name string) (*EVMChain, bool) {

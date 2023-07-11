@@ -16,6 +16,8 @@ type Config interface {
 	Tenderminter
 	Cosmoser
 	EVMer
+
+	Relay() RelayConfig
 }
 
 type config struct {
@@ -27,6 +29,8 @@ type config struct {
 	Tenderminter
 	Cosmoser
 	EVMer
+
+	relay comfig.Once
 }
 
 func New(getter kv.Getter) Config {
