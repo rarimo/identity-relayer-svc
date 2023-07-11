@@ -5,6 +5,13 @@ import (
 	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 )
 
+type IdentityTransferDetails struct {
+	OpIndex    string
+	Proof      []byte
+	Signature  string
+	MerklePath [][32]byte
+}
+
 type TransferDetails struct {
 	Transfer      rarimocore.Transfer
 	DstCollection tokenmanager.CollectionData

@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/ava-labs/subnet-evm/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gitlab.com/distributed_lab/logan/v3"
@@ -18,6 +21,21 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+var (
+	proofType, _ = abi.NewType("bytes32[]", "", nil)
+	sigType, _   = abi.NewType("bytes", "", nil)
+	proofArgs    = abi.Arguments{
+		{
+			Name: "path",
+			Type: proofType,
+		},
+		{
+			Name: "signature",
+			Type: sigType,
+		},
+	}
+)
+
 type core struct {
 	log  *logan.Entry
 	core rarimocore.QueryClient
@@ -25,6 +43,7 @@ type core struct {
 }
 
 type Core interface {
+	GetIdentityDefaultTransfer(ctx context.Context, confirmationID, operationID string) (*IdentityTransferDetails, error)
 	GetTransfers(ctx context.Context, confirmationID string) ([]TransferDetails, error)
 	GetTransfer(ctx context.Context, confirmationID string, transferID string) (*TransferDetails, error)
 	GetConfirmation(ctx context.Context, confirmationID string) (*rarimocore.Confirmation, error)
@@ -36,6 +55,123 @@ func NewCore(cfg config.Config) Core {
 		tm:   tokenmanager.NewQueryClient(cfg.Cosmos()),
 		log:  cfg.Log().WithField("service", "core"),
 	}
+}
+
+func (c *core) GetIdentityDefaultTransfers(ctx context.Context, confirmationID string) ([]IdentityTransferDetails, error) {
+	confirmation, err := c.GetConfirmation(ctx, confirmationID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch the confirmation")
+	}
+
+	contents := make([]merkle.Content, len(confirmation.Indexes))
+	result := make([]IdentityTransferDetails, len(confirmation.Indexes))
+
+	for i, idx := range confirmation.Indexes {
+		rawOp, err := c.core.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: idx})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch the operation")
+		}
+
+		merkleContent, err := getMerkleContentFromIdentityTransferOp(rawOp.Operation)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to make the identity transfer merkle content")
+		}
+
+		contents[i] = merkleContent
+		result[i].OpIndex = rawOp.Operation.Index
+		result[i].Signature = confirmation.SignatureECDSA
+	}
+
+	tree := merkle.NewTree(crypto.Keccak256, contents...)
+
+	signature := hexutil.MustDecode(confirmation.SignatureECDSA)
+	signature[64] += 27
+
+	for i, content := range contents {
+		contentPath, ok := tree.Path(content)
+		if !ok {
+			continue
+		}
+
+		pathHashes := make([]common.Hash, 0, len(contentPath))
+		for _, p := range contentPath {
+			pathHashes = append(pathHashes, common.BytesToHash(p))
+		}
+
+		result[i].Proof, err = proofArgs.Pack(contentPath, signature)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to pack the proof")
+		}
+	}
+
+	return result, nil
+}
+
+func (c *core) GetIdentityDefaultTransfer(ctx context.Context, confirmationID, operationID string) (*IdentityTransferDetails, error) {
+	confirmation, err := c.GetConfirmation(ctx, confirmationID)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch the confirmation")
+	}
+
+	contents := make([]merkle.Content, 0, len(confirmation.Indexes))
+	var targetContent merkle.Content
+
+	result := IdentityTransferDetails{
+		Signature: confirmation.SignatureECDSA,
+	}
+
+	for _, idx := range confirmation.Indexes {
+		rawOp, err := c.core.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: idx})
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch the operation")
+		}
+
+		if rawOp.Operation.OperationType != rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
+			continue
+		}
+
+		merkleContent, err := getMerkleContentFromIdentityTransferOp(rawOp.Operation)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to make the identity transfer merkle content")
+		}
+
+		contents = append(contents, merkleContent)
+
+		if rawOp.Operation.Index == operationID {
+			targetContent = merkleContent
+			result.OpIndex = rawOp.Operation.Index
+		}
+	}
+
+	tree := merkle.NewTree(crypto.Keccak256, contents...)
+
+	path, _ := tree.Path(targetContent)
+
+	pathHashes := make([]common.Hash, 0, len(path))
+	result.MerklePath = make([][32]byte, 0, len(path))
+	for _, p := range path {
+		pathHashes = append(pathHashes, common.BytesToHash(p))
+		result.MerklePath = append(result.MerklePath, utils.ToByte32(p))
+	}
+
+	signature := hexutil.MustDecode(confirmation.SignatureECDSA)
+	signature[64] += 27
+
+	result.Proof, err = proofArgs.Pack(pathHashes, signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode the proof")
+	}
+
+	return &result, nil
+}
+
+func getMerkleContentFromIdentityTransferOp(operation rarimocore.Operation) (merkle.Content, error) {
+	transfer, err := pkg.GetIdentityDefaultTransfer(operation)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch the transfer")
+	}
+
+	return pkg.GetIdentityDefaultTransferContent(transfer)
 }
 
 func (c *core) GetTransfers(ctx context.Context, confirmationID string) ([]TransferDetails, error) {

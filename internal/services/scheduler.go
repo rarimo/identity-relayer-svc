@@ -28,7 +28,7 @@ type Scheduler interface {
 	ScheduleRelays(
 		ctx context.Context,
 		confirmationID string,
-		transferIndexes []string,
+		operationIndexes []string,
 	) error
 }
 
@@ -113,27 +113,52 @@ func (s *scheduler) run(ctx context.Context) error {
 func (s *scheduler) ScheduleRelays(
 	ctx context.Context,
 	confirmationID string,
-	transferIndexes []string,
+	operationIndexes []string,
 ) error {
 	log := s.log.WithField("merkle_root", confirmationID)
 	log.Info("processing a confirmation")
 
-	transfers, err := s.core.GetTransfers(ctx, confirmationID)
-	if err != nil {
-		return errors.Wrap(err, "failed to get transfers")
-	}
-
-	tasks := []data.RelayTask{}
-	for _, transfer := range transfers {
-		if !slices.Contains(transferIndexes, transfer.Transfer.Origin) {
-			continue
+	tasks := make([]data.RelayTask, 0, len(operationIndexes))
+	for _, index := range operationIndexes {
+		operation, err := s.rarimocore.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: index})
+		if err != nil {
+			return errors.Wrap(err, "failed to get operation")
 		}
-		tasks = append(tasks, data.NewRelayTask(transfer, relayer.MaxRetries))
+
+		switch operation.Operation.OperationType {
+		case rarimocore.OpType_TRANSFER:
+			transfer, err := s.core.GetTransfer(ctx, confirmationID, operation.Operation.Index)
+			if err != nil {
+				return errors.Wrap(err, "failed to get transfer", logan.F{
+					"confirmation_id": confirmationID,
+					"operation_index": operation.Operation.Index,
+				})
+			}
+
+			if !slices.Contains(operationIndexes, transfer.Transfer.Origin) {
+				continue
+			}
+
+			tasks = append(tasks, data.NewRelayTransferTask(*transfer, relayer.MaxRetries))
+		case rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER:
+			transfer, err := s.core.GetIdentityDefaultTransfer(ctx, confirmationID, operation.Operation.Index)
+			if err != nil {
+				return errors.Wrap(err, "failed to get identity default transfer", logan.F{
+					"confirmation_id": confirmationID,
+					"operation_index": operation.Operation.Index,
+				})
+			}
+
+			if !slices.Contains(operationIndexes, transfer.OpIndex) {
+				continue
+			}
+			tasks = append(tasks, data.NewRelayIdentityTransferTask(*transfer, relayer.MaxRetries))
+		}
 	}
 
 	rawTasks := [][]byte{}
 	for _, task := range tasks {
-		if slices.Contains(transferIndexes, task.OperationIndex) {
+		if slices.Contains(operationIndexes, task.OperationIndex) {
 			rawTasks = append(rawTasks, task.Marshal())
 		}
 	}

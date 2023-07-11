@@ -3,22 +3,25 @@ package relayer
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/adjust/rmq/v5"
-
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	evmtypes "github.com/ethereum/go-ethereum/core/types"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
 	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
-
 	"gitlab.com/rarimo/relayer-svc/internal/config"
 	"gitlab.com/rarimo/relayer-svc/internal/data"
 	"gitlab.com/rarimo/relayer-svc/internal/data/core"
-	"gitlab.com/rarimo/relayer-svc/internal/types"
-
 	"gitlab.com/rarimo/relayer-svc/internal/services/bridger"
 	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/bridge"
+	"gitlab.com/rarimo/relayer-svc/internal/types"
+	"gitlab.com/rarimo/relayer-svc/internal/utils"
+	"gitlab.com/rarimo/relayer-svc/pkg/polygonid/contracts"
 )
 
 const (
@@ -29,20 +32,25 @@ const (
 	numConsumers  = 100
 )
 
+type StateTransitioner interface {
+	SignedTransitState(opts *bind.TransactOpts, prevState_ *big.Int, stateInfo_ contracts.IStateStateInfo, gistRootInfo_ contracts.IStateGistRootInfo, signature_ []byte) (*evmtypes.Transaction, error)
+}
+
 type relayer struct {
 	log   *logan.Entry
 	queue rmq.Queue
 }
 
 type relayerConsumer struct {
-	log             *logan.Entry
-	rarimocore      rarimocore.QueryClient
-	tokenmanager    tokenmanager.QueryClient
-	evm             *config.EVM
-	bridgerProvider bridger.BridgerProvider
-	solana          *config.Solana
-	near            *config.Near
-	queue           rmq.Queue
+	log               *logan.Entry
+	rarimocore        rarimocore.QueryClient
+	tokenmanager      tokenmanager.QueryClient
+	evm               *config.EVM
+	bridgerProvider   bridger.BridgerProvider
+	stateTransitioner StateTransitioner
+	solana            *config.Solana
+	near              *config.Near
+	queue             rmq.Queue
 }
 
 func Run(cfg config.Config, ctx context.Context) {
@@ -118,11 +126,87 @@ func (c *relayerConsumer) processOperation(task data.RelayTask) error {
 	switch operation.Operation.OperationType {
 	case rarimocore.OpType_TRANSFER:
 		return c.processTransfer(task, operation.Operation.Details.Value)
-	//case rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER:
-	//	return c.processIdentityDefaultTransfer(task, operation.Operation.Details.Value)
+	case rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER:
+		return c.processIdentityDefaultTransfer(hexutil.MustDecode(task.Proof), operation.Operation.Details.Value)
 	default:
 		return fmt.Errorf("unknown operation type %s", operation.Operation.OperationType)
 	}
+}
+
+func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byte) error {
+	var transfer rarimocore.IdentityDefaultTransfer
+	if err := transfer.Unmarshal(raw); err != nil {
+		return errors.Wrap(err, "failed to unmarshal identity transfer")
+	}
+
+	chain, ok := c.evm.GetChainByName(transfer.Chain)
+	if !ok {
+		return errors.From(errors.New("unknown chain"), logan.F{
+			"chain": transfer.Chain,
+		})
+	}
+
+	opts := chain.TransactorOpts()
+	nonce, err := chain.RPC.PendingNonceAt(context.TODO(), chain.SubmitterAddress)
+	if err != nil {
+		return errors.Wrap(err, "failed to fetch a nonce")
+	}
+	opts.Nonce = big.NewInt(int64(nonce))
+	gasPrice, err := chain.RPC.SuggestGasPrice(context.TODO())
+	if err != nil {
+		return errors.Wrap(err, "failed to get suggested gas price")
+	}
+	opts.GasPrice = gasPrice
+	opts.GasLimit = uint64(300000)
+
+	replacedState, err := hexutil.DecodeBig(transfer.ReplacedStateHash)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode replaced state hash")
+	}
+
+	stateInfo, err := getStateInfo(transfer)
+	if err != nil {
+		return errors.Wrap(err, "failed to get state info from transfer")
+	}
+
+	gistRootInfo, err := getGistRootInfo(transfer)
+	if err != nil {
+		return errors.Wrap(err, "failed to get gist root info from transfer")
+	}
+
+	tx, err := c.stateTransitioner.SignedTransitState(opts, replacedState, stateInfo, gistRootInfo, proof)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to send state transition tx")
+	}
+
+	c.log.WithField("tx_hash", tx.Hash().Hex()).Debug("state transition tx sent")
+
+	receipt, err := bind.WaitMined(context.Background(), chain.RPC, tx)
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for state transition tx")
+	}
+
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for the transaction to be mined")
+	}
+	if receipt.Status == 0 {
+		return errors.Wrap(err, "transaction failed", logan.F{
+			"receipt": utils.Prettify(receipt),
+			"chain":   transfer.Chain,
+		})
+	}
+
+	c.log.
+		WithFields(logan.F{
+			"tx_id":        tx.Hash(),
+			"tx_index":     receipt.TransactionIndex,
+			"block_number": receipt.BlockNumber,
+			"gas_used":     receipt.GasUsed,
+		}).
+		Info("evm transaction confirmed")
+
+	return nil
 }
 
 func (c *relayerConsumer) processTransfer(task data.RelayTask, raw []byte) error {
@@ -192,6 +276,81 @@ func (c *relayerConsumer) processTransfer(task data.RelayTask, raw []byte) error
 	}
 
 	return nil
+}
+
+func getStateInfo(transfer rarimocore.IdentityDefaultTransfer) (state contracts.IStateStateInfo, err error) {
+	state.Id, err = hexutil.DecodeBig(transfer.Id)
+	if err != nil {
+		return contracts.IStateStateInfo{}, errors.Wrap(err, "failed to decode issuer ID")
+	}
+
+	state.State, err = hexutil.DecodeBig(transfer.StateHash)
+	if err != nil {
+		return contracts.IStateStateInfo{}, errors.Wrap(err, "failed to decode state hash")
+	}
+
+	state.ReplacedByState, err = hexutil.DecodeBig(transfer.StateReplacedBy)
+	if err != nil {
+		return contracts.IStateStateInfo{}, errors.Wrap(err, "failed to decode replaced state hash")
+	}
+
+	var ok bool
+	state.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.StateCreatedAtTimestamp, 10)
+	if !ok {
+		return contracts.IStateStateInfo{}, errors.New("failed to decode state created at timestamp")
+	}
+
+	state.ReplacedAtTimestamp, ok = big.NewInt(0).SetString(transfer.StateReplacedAtTimestamp, 10)
+	if !ok {
+		return contracts.IStateStateInfo{}, errors.New("failed to decode state replaced at timestamp")
+	}
+
+	state.CreatedAtBlock, ok = big.NewInt(0).SetString(transfer.StateCreatedAtBlock, 10)
+	if !ok {
+		return contracts.IStateStateInfo{}, errors.New("failed to decode state created at block")
+	}
+
+	state.ReplacedAtBlock, ok = big.NewInt(0).SetString(transfer.StateReplacedAtBlock, 10)
+	if !ok {
+		return contracts.IStateStateInfo{}, errors.New("failed to decode state replaced at block")
+	}
+
+	return
+}
+
+func getGistRootInfo(transfer rarimocore.IdentityDefaultTransfer) (gistRoot contracts.IStateGistRootInfo, err error) {
+	gistRoot.Root, err = hexutil.DecodeBig(transfer.GISTHash)
+	if err != nil {
+		return contracts.IStateGistRootInfo{}, errors.Wrap(err, "failed to decode GIST hash")
+	}
+
+	gistRoot.ReplacedByRoot, err = hexutil.DecodeBig(transfer.GISTReplacedBy)
+	if err != nil {
+		return contracts.IStateGistRootInfo{}, errors.Wrap(err, "failed to decode GIST replaced by hash")
+	}
+
+	var ok bool
+	gistRoot.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.GISTCreatedAtTimestamp, 10)
+	if !ok {
+		return contracts.IStateGistRootInfo{}, errors.New("failed to decode GIST created at timestamp")
+	}
+
+	gistRoot.ReplacedAtTimestamp, ok = big.NewInt(0).SetString(transfer.GISTReplacedAtTimestamp, 10)
+	if !ok {
+		return contracts.IStateGistRootInfo{}, errors.New("failed to decode GIST replaced at timestamp")
+	}
+
+	gistRoot.CreatedAtBlock, ok = big.NewInt(0).SetString(transfer.GISTCreatedAtBlock, 10)
+	if !ok {
+		return contracts.IStateGistRootInfo{}, errors.New("failed to decode GIST created at block")
+	}
+
+	gistRoot.ReplacedAtBlock, ok = big.NewInt(0).SetString(transfer.GISTReplacedAtBlock, 10)
+	if !ok {
+		return contracts.IStateGistRootInfo{}, errors.New("failed to decode GIST replaced at block")
+	}
+
+	return
 }
 
 func mustReject(delivery rmq.Delivery) {

@@ -12,13 +12,25 @@ import (
 type RelayTask struct {
 	OperationIndex string
 	Signature      string
+	Proof          string
 	Origin         string
 	MerklePath     []string
 
 	RetriesLeft int
 }
 
-func NewRelayTask(transfer core.TransferDetails, maxRetries int) RelayTask {
+func NewRelayIdentityTransferTask(identityTransfer core.IdentityTransferDetails, maxRetries int) RelayTask {
+	t := RelayTask{
+		OperationIndex: identityTransfer.OpIndex,
+		Proof:          hexutil.Encode(identityTransfer.Proof),
+		Origin:         "", // TODO ??
+		RetriesLeft:    maxRetries,
+	}
+
+	return t
+}
+
+func NewRelayTransferTask(transfer core.TransferDetails, maxRetries int) RelayTask {
 	task := RelayTask{
 		OperationIndex: transfer.Transfer.Origin,
 		Signature:      transfer.Signature,
