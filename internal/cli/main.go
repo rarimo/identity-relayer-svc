@@ -63,11 +63,13 @@ func Run(args []string) {
 	switch cmd {
 	case runAllCmd.FullCommand():
 		log.Info("starting all services")
+		run(services.RunInstaScheduler)
 		run(services.RunScheduler)
 		run(relayer.Run)
 		run(services.RunQueueCleaner)
 	case runSchedulerCmd.FullCommand():
 		log.Info("starting scheduler")
+		run(services.RunInstaScheduler)
 		run(services.RunScheduler)
 	case runRelayerCmd.FullCommand():
 		log.Info("starting all services")

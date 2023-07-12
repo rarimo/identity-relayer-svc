@@ -11,8 +11,6 @@ import (
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	"gitlab.com/distributed_lab/running"
-	"golang.org/x/exp/slices"
-
 	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
 	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 	"gitlab.com/rarimo/relayer-svc/internal/config"
@@ -52,6 +50,17 @@ func newScheduler(cfg config.Config) *scheduler {
 		rarimocore:   rarimocore.NewQueryClient(cfg.Cosmos()),
 		relayQueue:   cfg.Redis().OpenRelayQueue(),
 		core:         core.NewCore(cfg),
+	}
+}
+
+func RunInstaScheduler(cfg config.Config, ctx context.Context) {
+	if c := cfg.Relay(); c.InstaSubmitEnabled {
+		s := newScheduler(cfg)
+		s.log.Infof("Performing insta submitting for index=%s, conf=%s", c.InstaSubmitOperationId, c.InstaSubmitConfirmationId)
+
+		if err := s.ScheduleRelays(ctx, c.InstaSubmitConfirmationId, []string{c.InstaSubmitOperationId}); err != nil {
+			s.log.WithError(err).Error("failed to schedule")
+		}
 	}
 }
 
@@ -119,10 +128,6 @@ func (s *scheduler) ScheduleRelays(
 					"confirmation_id": confirmationID,
 					"operation_index": operation.Operation.Index,
 				})
-			}
-
-			if !slices.Contains(operationIndexes, transfer.OpIndex) {
-				continue
 			}
 
 			rawTasks = append(rawTasks, data.NewRelayIdentityTransferTask(*transfer, relayer.MaxRetries).Marshal())

@@ -145,8 +145,6 @@ func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byt
 		return errors.Wrap(err, "failed to get suggested gas price")
 	}
 	opts.GasPrice = gasPrice
-	opts.GasLimit = uint64(300000)
-
 	replacedState := new(big.Int).SetBytes(hexutil.MustDecode(transfer.ReplacedStateHash))
 
 	stateInfo, err := getStateInfo(transfer)
