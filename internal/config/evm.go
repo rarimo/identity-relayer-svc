@@ -1,12 +1,10 @@
 package config
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"math/big"
 	"reflect"
 
-	avalanche "github.com/ava-labs/subnet-evm/ethclient"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -34,14 +32,12 @@ type EVM struct {
 
 type EVMChain struct {
 	Name                string            `fig:"name,required"`
-	BridgeAddress       common.Address    `fig:"bridge_address,required"`
+	BridgeAddress       common.Address    `fig:"contract_address,required"`
 	SubmitterPrivateKey *ecdsa.PrivateKey `fig:"submitter_private_key,required"`
 	SubmitterAddress    common.Address    `fig:"-"`
 	RPC                 *ethclient.Client `fig:"-"`
 	RPCURL              string            `fig:"rpc,required"`
-	ChainID             *big.Int          `fig:"-"`
-
-	avalancheOnce comfig.Once
+	ChainID             *big.Int          `fig:"chain_id,required"`
 }
 
 func NewEVMer(getter kv.Getter) EVMer {
@@ -74,17 +70,6 @@ func (e *EVMChain) TransactorOpts() *bind.TransactOpts {
 	}
 
 	return t
-}
-
-func (e *EVMChain) AvalancheRPC() avalanche.Client {
-	return e.avalancheOnce.Do(func() interface{} {
-		client, err := avalanche.Dial(e.RPCURL)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to dial avalanche rpc"))
-		}
-
-		return client
-	}).(avalanche.Client)
 }
 
 func (e *EVM) GetChainByName(name string) (*EVMChain, bool) {
@@ -130,13 +115,7 @@ func parseEVMChain(value interface{}) ([]EVMChain, error) {
 			return nil, errors.Wrap(err, "failed to dial eth rpc")
 		}
 
-		cID, err := chain.RPC.ChainID(context.TODO())
-		if err != nil {
-			panic(errors.Wrap(err, "failed to get chain id"))
-		}
-		chain.ChainID = cID
 		chain.SubmitterAddress = crypto.PubkeyToAddress(chain.SubmitterPrivateKey.PublicKey)
-
 		chains[idx] = chain
 	}
 

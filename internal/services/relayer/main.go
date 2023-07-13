@@ -3,22 +3,20 @@ package relayer
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/adjust/rmq/v5"
-
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	evmtypes "github.com/ethereum/go-ethereum/core/types"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
-
 	"gitlab.com/rarimo/relayer-svc/internal/config"
 	"gitlab.com/rarimo/relayer-svc/internal/data"
-	"gitlab.com/rarimo/relayer-svc/internal/data/core"
-	"gitlab.com/rarimo/relayer-svc/internal/types"
-
-	"gitlab.com/rarimo/relayer-svc/internal/services/bridger"
-	"gitlab.com/rarimo/relayer-svc/internal/services/bridger/bridge"
+	"gitlab.com/rarimo/relayer-svc/internal/utils"
+	"gitlab.com/rarimo/relayer-svc/pkg/polygonid/contracts"
 )
 
 const (
@@ -29,20 +27,21 @@ const (
 	numConsumers  = 100
 )
 
+type StateTransitioner interface {
+	SignedTransitState(opts *bind.TransactOpts, prevState_ *big.Int, prevGist_ *big.Int, stateInfo_ contracts.ILightweightStateV2StateData, gistRootInfo_ contracts.ILightweightStateV2GistRootData, signature_ []byte) (*evmtypes.Transaction, error)
+}
+
 type relayer struct {
 	log   *logan.Entry
 	queue rmq.Queue
 }
 
 type relayerConsumer struct {
-	log             *logan.Entry
-	rarimocore      rarimocore.QueryClient
-	tokenmanager    tokenmanager.QueryClient
-	evm             *config.EVM
-	bridgerProvider bridger.BridgerProvider
-	solana          *config.Solana
-	near            *config.Near
-	queue           rmq.Queue
+	log               *logan.Entry
+	rarimocore        rarimocore.QueryClient
+	targetChain       *config.EVMChain
+	stateTransitioner StateTransitioner
+	queue             rmq.Queue
 }
 
 func Run(cfg config.Config, ctx context.Context) {
@@ -52,13 +51,18 @@ func Run(cfg config.Config, ctx context.Context) {
 		queue: cfg.Redis().OpenRelayQueue(),
 	}
 
+	targetChain, ok := cfg.EVM().GetChainByName(cfg.Relay().TargetChain)
+	if !ok {
+		panic(fmt.Errorf("unknown target chain [%s]", cfg.Relay().TargetChain))
+	}
+
 	if err := r.queue.StartConsuming(prefetchLimit, pollDuration); err != nil {
 		panic(errors.Wrap(err, "failed to start consuming the relay queue"))
 	}
 
 	for i := 0; i < numConsumers; i++ {
 		name := fmt.Sprintf("relay-consumer-%d", i)
-		if _, err := r.queue.AddConsumer(name, newConsumer(cfg, name)); err != nil {
+		if _, err := r.queue.AddConsumer(name, newConsumer(cfg, name, targetChain)); err != nil {
 			panic(err)
 		}
 	}
@@ -68,16 +72,18 @@ func Run(cfg config.Config, ctx context.Context) {
 	r.log.Info("finished consuming relayer queue")
 }
 
-func newConsumer(cfg config.Config, id string) *relayerConsumer {
+func newConsumer(cfg config.Config, id string, chain *config.EVMChain) *relayerConsumer {
+	contract, err := contracts.NewLightweightStateV2(chain.BridgeAddress, chain.RPC)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to instantiate the contract"))
+	}
+
 	return &relayerConsumer{
-		log:             cfg.Log().WithField("service", id),
-		rarimocore:      rarimocore.NewQueryClient(cfg.Cosmos()),
-		tokenmanager:    tokenmanager.NewQueryClient(cfg.Cosmos()),
-		evm:             cfg.EVM(),
-		solana:          cfg.Solana(),
-		near:            cfg.Near(),
-		queue:           cfg.Redis().OpenRelayQueue(),
-		bridgerProvider: bridger.NewBridgerProvider(cfg),
+		log:               cfg.Log().WithField("service", id),
+		rarimocore:        rarimocore.NewQueryClient(cfg.Cosmos()),
+		targetChain:       chain,
+		stateTransitioner: contract,
+		queue:             cfg.Redis().OpenRelayQueue(),
 	}
 }
 
@@ -91,7 +97,7 @@ func (c *relayerConsumer) Consume(delivery rmq.Delivery) {
 	var task data.RelayTask
 	task.Unmarshal(delivery.Payload())
 
-	if err := c.processTransfer(task); err != nil {
+	if err := c.processIdentityTransfer(task); err != nil {
 		c.log.WithError(err).WithField("transfer_id", task.OperationIndex).Error("failed to process transfer")
 		mustReject(delivery)
 		c.mustScheduleRetry(task)
@@ -103,78 +109,129 @@ func (c *relayerConsumer) Consume(delivery rmq.Delivery) {
 	}
 }
 
-func (c *relayerConsumer) processTransfer(task data.RelayTask) error {
+func (c *relayerConsumer) processIdentityTransfer(task data.RelayTask) error {
 	log := c.log.WithField("op_id", task.OperationIndex)
 
-	log.Info("processing a transfer")
+	log.Info("processing operation")
 	operation, err := c.rarimocore.Operation(context.TODO(), &rarimocore.QueryGetOperationRequest{Index: task.OperationIndex})
 	if err != nil {
-		return errors.Wrap(err, "failed to get the transfer")
+		return errors.Wrap(err, "failed to get the operation")
 	}
-	if !operation.Operation.Signed {
-		return errors.New("transfer is not signed yet")
-	}
-	transfer := rarimocore.Transfer{}
-	if err := transfer.Unmarshal(operation.Operation.Details.Value); err != nil {
-		return errors.Wrap(err, "failed to unmarshal  transfer")
+	if operation.Operation.Status != rarimocore.OpStatus_SIGNED {
+		return errors.New("operation is not signed yet")
 	}
 
-	tokenInfo, err := c.tokenmanager.Info(context.TODO(), &tokenmanager.QueryGetInfoRequest{Index: transfer.TokenIndex})
+	if operation.Operation.OperationType != rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
+		return fmt.Errorf("unknown operation type %s", operation.Operation.OperationType)
+	}
+
+	return c.processIdentityDefaultTransfer(hexutil.MustDecode(task.Proof), operation.Operation.Details.Value)
+}
+
+func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byte) error {
+	var transfer rarimocore.IdentityDefaultTransfer
+	if err := transfer.Unmarshal(raw); err != nil {
+		return errors.Wrap(err, "failed to unmarshal identity transfer")
+	}
+
+	opts := c.targetChain.TransactorOpts()
+	nonce, err := c.targetChain.RPC.PendingNonceAt(context.TODO(), c.targetChain.SubmitterAddress)
 	if err != nil {
-		return errors.Wrap(err, "failed to get token info")
+		return errors.Wrap(err, "failed to fetch a nonce")
 	}
-	token, found := tokenInfo.Info.Chains[transfer.ToChain]
-	if !found {
-		return fmt.Errorf("unknown toChain = %s", transfer.ToChain)
-	}
-	tokenDetails, err := c.tokenmanager.Item(context.TODO(), &tokenmanager.QueryGetItemRequest{
-		TokenAddress: token.TokenAddress,
-		TokenId:      token.TokenId,
-		Chain:        transfer.ToChain,
-	})
+	opts.Nonce = big.NewInt(int64(nonce))
+	gasPrice, err := c.targetChain.RPC.SuggestGasPrice(context.TODO())
 	if err != nil {
-		return errors.Wrap(err, "failed to get token details")
+		return errors.Wrap(err, "failed to get suggested gas price")
 	}
+	opts.GasPrice = gasPrice
 
-	network, err := c.tokenmanager.Params(context.TODO(), new(tokenmanager.QueryParamsRequest))
+	replacedState := new(big.Int).SetBytes(hexutil.MustDecode(transfer.ReplacedStateHash))
+	replacedGIST := new(big.Int).SetBytes(hexutil.MustDecode(transfer.ReplacedGISTHash))
+
+	stateInfo, err := getStateInfo(transfer)
 	if err != nil {
-		return errors.Wrap(err, "error getting network info entry")
+		return errors.Wrap(err, "failed to get state info from transfer")
 	}
 
-	transferDetails := core.TransferDetails{
-		Transfer:     transfer,
-		Token:        tokenInfo.Info,
-		TokenDetails: tokenDetails.Item,
-		Signature:    task.Signature,
-		Origin:       task.Origin,
-		MerklePath:   task.MustParseMerklePath(),
+	gistRootInfo, err := getGistRootInfo(transfer)
+	if err != nil {
+		return errors.Wrap(err, "failed to get gist root info from transfer")
 	}
 
-	log.
+	tx, err := c.stateTransitioner.SignedTransitState(opts, replacedState, replacedGIST, stateInfo, gistRootInfo, proof)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to send state transition tx")
+	}
+
+	c.log.WithField("tx_hash", tx.Hash().Hex()).Debug("state transition tx sent")
+
+	receipt, err := bind.WaitMined(context.Background(), c.targetChain.RPC, tx)
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for state transition tx")
+	}
+
+	if err != nil {
+		return errors.Wrap(err, "failed to wait for the transaction to be mined")
+	}
+	if receipt.Status == 0 {
+		return errors.Wrap(err, "transaction failed", logan.F{
+			"receipt": utils.Prettify(receipt),
+			"chain":   transfer.Chain,
+		})
+	}
+
+	c.log.
 		WithFields(logan.F{
-			"to":         transfer.Receiver,
-			"token_type": tokenDetails.Item.TokenType,
-			"to_chain":   transfer.ToChain,
+			"tx_id":        tx.Hash(),
+			"tx_index":     receipt.TransactionIndex,
+			"block_number": receipt.BlockNumber,
+			"gas_used":     receipt.GasUsed,
 		}).
-		Info("relaying a transfer")
-
-	switch {
-	case transfer.ToChain == types.Near:
-		err = c.processNearTransfer(task, transfer, *token, tokenDetails.Item, network.Params)
-	default:
-		bridger := c.bridgerProvider.GetBridger(transfer.ToChain)
-		err = bridger.Withdraw(context.Background(), transferDetails)
-	}
-
-	if errors.Cause(err) == bridge.ErrAlreadyWithdrawn {
-		log.Info("transfer was already withdrawn")
-		return nil
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to process a transfer")
-	}
+		Info("evm transaction confirmed")
 
 	return nil
+}
+
+func getStateInfo(transfer rarimocore.IdentityDefaultTransfer) (state contracts.ILightweightStateV2StateData, err error) {
+	state.Id = new(big.Int).SetBytes(hexutil.MustDecode(transfer.Id))
+
+	state.State = new(big.Int).SetBytes(hexutil.MustDecode(transfer.StateHash))
+
+	state.ReplacedByState = new(big.Int).SetBytes(hexutil.MustDecode(transfer.StateReplacedBy))
+
+	var ok bool
+	state.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.StateCreatedAtTimestamp, 10)
+	if !ok {
+		return contracts.ILightweightStateV2StateData{}, errors.New("failed to decode state created at timestamp")
+	}
+
+	state.CreatedAtBlock, ok = big.NewInt(0).SetString(transfer.StateCreatedAtBlock, 10)
+	if !ok {
+		return contracts.ILightweightStateV2StateData{}, errors.New("failed to decode state created at block")
+	}
+
+	return
+}
+
+func getGistRootInfo(transfer rarimocore.IdentityDefaultTransfer) (gistRoot contracts.ILightweightStateV2GistRootData, err error) {
+	gistRoot.Root = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTHash))
+
+	gistRoot.ReplacedByRoot = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTReplacedBy))
+
+	var ok bool
+	gistRoot.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.GISTCreatedAtTimestamp, 10)
+	if !ok {
+		return contracts.ILightweightStateV2GistRootData{}, errors.New("failed to decode GIST created at timestamp")
+	}
+
+	gistRoot.CreatedAtBlock, ok = big.NewInt(0).SetString(transfer.GISTCreatedAtBlock, 10)
+	if !ok {
+		return contracts.ILightweightStateV2GistRootData{}, errors.New("failed to decode GIST created at block")
+	}
+
+	return
 }
 
 func mustReject(delivery rmq.Delivery) {

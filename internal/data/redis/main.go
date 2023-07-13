@@ -42,7 +42,7 @@ func (r *rediser) OpenRelayQueue() rmq.Queue {
 }
 
 func NewRediser(cfg config, log *logan.Entry) Rediser {
-	client := redis.NewClient(&redis.Options{Addr: cfg.Addr})
+	client := redis.NewClient(&redis.Options{Addr: cfg.Addr, Password: cfg.Password})
 	errChan := make(chan error)
 	connection, err := rmq.OpenConnectionWithRedisClient("redis-queue", client, errChan)
 	if err != nil {

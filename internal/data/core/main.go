@@ -2,20 +2,33 @@ package core
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/ava-labs/subnet-evm/accounts/abi"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	merkle "gitlab.com/rarimo/go-merkle"
-	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/operation"
-	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/pkg"
 	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
 	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 	"gitlab.com/rarimo/relayer-svc/internal/config"
-	"gitlab.com/rarimo/relayer-svc/internal/utils"
-	"golang.org/x/exp/slices"
+)
+
+var (
+	proofType, _ = abi.NewType("bytes32[]", "", nil)
+	sigType, _   = abi.NewType("bytes", "", nil)
+	proofArgs    = abi.Arguments{
+		{
+			Name: "path",
+			Type: proofType,
+		},
+		{
+			Name: "signature",
+			Type: sigType,
+		},
+	}
 )
 
 type core struct {
@@ -25,9 +38,7 @@ type core struct {
 }
 
 type Core interface {
-	GetTransfers(ctx context.Context, confirmationID string) ([]TransferDetails, error)
-	GetTransfer(ctx context.Context, confirmationID string, transferID string) (*TransferDetails, error)
-	GetConfirmation(ctx context.Context, confirmationID string) (*rarimocore.Confirmation, error)
+	GetIdentityDefaultTransfer(ctx context.Context, confirmationID, operationID string) (*IdentityTransferDetails, error)
 }
 
 func NewCore(cfg config.Config) Core {
@@ -38,80 +49,59 @@ func NewCore(cfg config.Config) Core {
 	}
 }
 
-func (c *core) GetTransfers(ctx context.Context, confirmationID string) ([]TransferDetails, error) {
-	log := c.log.WithField("merkle_root", confirmationID)
-	log.Info("processing a confirmation")
-
+func (c *core) GetIdentityDefaultTransfer(ctx context.Context, confirmationID, operationID string) (*IdentityTransferDetails, error) {
 	confirmation, err := c.GetConfirmation(ctx, confirmationID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch the confirmation")
 	}
-	networks, err := c.tm.Params(ctx, new(tokenmanager.QueryParamsRequest))
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch the network params")
-	}
 
-	transfers := make([]TransferDetails, 0, len(confirmation.Indexes))
-	operations := []*operation.TransferContent{}
-	contents := []merkle.Content{}
+	var targetContent merkle.Content
+	var result IdentityTransferDetails
 
-	for _, id := range confirmation.Indexes {
-		operation, err := c.core.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: id})
+	operations := make([]rarimocore.Operation, 0, len(confirmation.Indexes))
+	for _, idx := range confirmation.Indexes {
+		rawOp, err := c.core.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: idx})
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch the operation")
 		}
-		transfer := rarimocore.Transfer{}
-		if err := transfer.Unmarshal(operation.Operation.Details.Value); err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal the transfer")
+
+		if rawOp.Operation.Index == operationID && rawOp.Operation.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
+			targetContent, err = c.getIdentityDefaultTransferContent(rawOp.Operation)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to make the identity transfer merkle content", logan.F{
+					"operation": rawOp.Operation.Index,
+				})
+			}
+
+			result.OpIndex = rawOp.Operation.Index
 		}
 
-		token, err := c.tm.Info(ctx, &tokenmanager.QueryGetInfoRequest{Index: transfer.TokenIndex})
-		if err != nil {
-			return nil, errors.Wrap(err, "error getting token info entry")
-		}
+		operations = append(operations, rawOp.Operation)
+	}
 
-		tokenDetails, err := c.tm.Item(ctx, &tokenmanager.QueryGetItemRequest{
-			TokenAddress: token.Info.Chains[transfer.ToChain].TokenAddress,
-			TokenId:      token.Info.Chains[transfer.ToChain].TokenId,
-			Chain:        transfer.ToChain,
-		})
-		if err != nil {
-			return nil, errors.Wrap(err, "error getting token item entry")
-		}
-
-		content, err := pkg.GetTransferContent(
-			&tokenDetails.Item,
-			networks.Params.Networks[transfer.ToChain],
-			&transfer,
-		)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to get transfer content")
-		}
-		contents = append(contents, content)
-		operations = append(operations, content)
-
-		transfers = append(transfers, TransferDetails{
-			Transfer:     transfer,
-			Token:        token.Info,
-			TokenDetails: tokenDetails.Item,
-			Signature:    confirmation.SignatureECDSA,
-			Origin:       hexutil.Encode(content.Origin[:]),
-		})
+	contents, err := c.getContents(operations...)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get contents")
 	}
 
 	tree := merkle.NewTree(crypto.Keccak256, contents...)
-	for i, operation := range operations {
-		rawPath, ok := tree.Path(operation)
-		if !ok {
-			panic(fmt.Errorf("failed to build Merkle tree"))
-		}
-		transfers[i].MerklePath = make([][32]byte, 0, len(rawPath))
-		for _, hash := range rawPath {
-			transfers[i].MerklePath = append(transfers[i].MerklePath, utils.ToByte32(hash))
-		}
+
+	path, _ := tree.Path(targetContent)
+
+	pathHashes := make([]common.Hash, 0, len(path))
+	for _, p := range path {
+		pathHashes = append(pathHashes, common.BytesToHash(p))
 	}
 
-	return transfers, nil
+	signature := hexutil.MustDecode(confirmation.SignatureECDSA)
+	signature[64] += 27
+
+	result.Proof, err = proofArgs.Pack(pathHashes, signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode the proof")
+	}
+
+	return &result, nil
 }
 
 func (c *core) GetConfirmation(ctx context.Context, confirmationID string) (*rarimocore.Confirmation, error) {
@@ -127,19 +117,4 @@ func (c *core) GetConfirmation(ctx context.Context, confirmationID string) (*rar
 	}
 
 	return &confirmation.Confirmation, nil
-}
-
-func (c *core) GetTransfer(ctx context.Context, confirmationID string, transferID string) (*TransferDetails, error) {
-	transfers, err := c.GetTransfers(ctx, confirmationID)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get transfers")
-	}
-	transferI := slices.IndexFunc(transfers, func(t TransferDetails) bool {
-		return t.Origin == transferID
-	})
-	if transferI == -1 {
-		return nil, errors.New("transfer not found")
-	}
-
-	return &transfers[transferI], nil
 }
