@@ -13,7 +13,8 @@ type Rediserer interface {
 }
 
 type config struct {
-	Addr string `fig:"addr,required"`
+	Addr     string `fig:"addr,required"`
+	Password string `fig:"password,required"`
 }
 
 type rediserer struct {
