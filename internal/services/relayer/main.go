@@ -28,7 +28,7 @@ const (
 )
 
 type StateTransitioner interface {
-	SignedTransitState(opts *bind.TransactOpts, prevState_ *big.Int, stateInfo_ contracts.IStateStateInfo, gistRootInfo_ contracts.IStateGistRootInfo, signature_ []byte) (*evmtypes.Transaction, error)
+	SignedTransitState(opts *bind.TransactOpts, prevState_ *big.Int, prevGist_ *big.Int, stateInfo_ contracts.ILightweightStateV2StateData, gistRootInfo_ contracts.ILightweightStateV2GistRootData, signature_ []byte) (*evmtypes.Transaction, error)
 }
 
 type relayer struct {
@@ -145,7 +145,9 @@ func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byt
 		return errors.Wrap(err, "failed to get suggested gas price")
 	}
 	opts.GasPrice = gasPrice
+
 	replacedState := new(big.Int).SetBytes(hexutil.MustDecode(transfer.ReplacedStateHash))
+	replacedGIST := new(big.Int).SetBytes(hexutil.MustDecode(transfer.ReplacedGISTHash))
 
 	stateInfo, err := getStateInfo(transfer)
 	if err != nil {
@@ -157,7 +159,7 @@ func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byt
 		return errors.Wrap(err, "failed to get gist root info from transfer")
 	}
 
-	tx, err := c.stateTransitioner.SignedTransitState(opts, replacedState, stateInfo, gistRootInfo, proof)
+	tx, err := c.stateTransitioner.SignedTransitState(opts, replacedState, replacedGIST, stateInfo, gistRootInfo, proof)
 
 	if err != nil {
 		return errors.Wrap(err, "failed to send state transition tx")
@@ -192,7 +194,7 @@ func (c *relayerConsumer) processIdentityDefaultTransfer(proof []byte, raw []byt
 	return nil
 }
 
-func getStateInfo(transfer rarimocore.IdentityDefaultTransfer) (state contracts.IStateStateInfo, err error) {
+func getStateInfo(transfer rarimocore.IdentityDefaultTransfer) (state contracts.ILightweightStateV2StateData, err error) {
 	state.Id = new(big.Int).SetBytes(hexutil.MustDecode(transfer.Id))
 
 	state.State = new(big.Int).SetBytes(hexutil.MustDecode(transfer.StateHash))
@@ -202,28 +204,18 @@ func getStateInfo(transfer rarimocore.IdentityDefaultTransfer) (state contracts.
 	var ok bool
 	state.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.StateCreatedAtTimestamp, 10)
 	if !ok {
-		return contracts.IStateStateInfo{}, errors.New("failed to decode state created at timestamp")
-	}
-
-	state.ReplacedAtTimestamp, ok = big.NewInt(0).SetString(transfer.StateReplacedAtTimestamp, 10)
-	if !ok {
-		return contracts.IStateStateInfo{}, errors.New("failed to decode state replaced at timestamp")
+		return contracts.ILightweightStateV2StateData{}, errors.New("failed to decode state created at timestamp")
 	}
 
 	state.CreatedAtBlock, ok = big.NewInt(0).SetString(transfer.StateCreatedAtBlock, 10)
 	if !ok {
-		return contracts.IStateStateInfo{}, errors.New("failed to decode state created at block")
-	}
-
-	state.ReplacedAtBlock, ok = big.NewInt(0).SetString(transfer.StateReplacedAtBlock, 10)
-	if !ok {
-		return contracts.IStateStateInfo{}, errors.New("failed to decode state replaced at block")
+		return contracts.ILightweightStateV2StateData{}, errors.New("failed to decode state created at block")
 	}
 
 	return
 }
 
-func getGistRootInfo(transfer rarimocore.IdentityDefaultTransfer) (gistRoot contracts.IStateGistRootInfo, err error) {
+func getGistRootInfo(transfer rarimocore.IdentityDefaultTransfer) (gistRoot contracts.ILightweightStateV2GistRootData, err error) {
 	gistRoot.Root = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTHash))
 
 	gistRoot.ReplacedByRoot = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTReplacedBy))
@@ -231,22 +223,12 @@ func getGistRootInfo(transfer rarimocore.IdentityDefaultTransfer) (gistRoot cont
 	var ok bool
 	gistRoot.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.GISTCreatedAtTimestamp, 10)
 	if !ok {
-		return contracts.IStateGistRootInfo{}, errors.New("failed to decode GIST created at timestamp")
-	}
-
-	gistRoot.ReplacedAtTimestamp, ok = big.NewInt(0).SetString(transfer.GISTReplacedAtTimestamp, 10)
-	if !ok {
-		return contracts.IStateGistRootInfo{}, errors.New("failed to decode GIST replaced at timestamp")
+		return contracts.ILightweightStateV2GistRootData{}, errors.New("failed to decode GIST created at timestamp")
 	}
 
 	gistRoot.CreatedAtBlock, ok = big.NewInt(0).SetString(transfer.GISTCreatedAtBlock, 10)
 	if !ok {
-		return contracts.IStateGistRootInfo{}, errors.New("failed to decode GIST created at block")
-	}
-
-	gistRoot.ReplacedAtBlock, ok = big.NewInt(0).SetString(transfer.GISTReplacedAtBlock, 10)
-	if !ok {
-		return contracts.IStateGistRootInfo{}, errors.New("failed to decode GIST replaced at block")
+		return contracts.ILightweightStateV2GistRootData{}, errors.New("failed to decode GIST created at block")
 	}
 
 	return
