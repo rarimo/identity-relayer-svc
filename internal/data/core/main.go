@@ -58,7 +58,6 @@ func (c *core) GetIdentityDefaultTransfer(ctx context.Context, confirmationID, o
 	}
 
 	var targetContent merkle.Content
-	var result IdentityTransferDetails
 
 	operations := make([]rarimocore.Operation, 0, len(confirmation.Indexes))
 	for _, idx := range confirmation.Indexes {
@@ -75,7 +74,6 @@ func (c *core) GetIdentityDefaultTransfer(ctx context.Context, confirmationID, o
 				})
 			}
 
-			result.OpIndex = rawOp.Operation.Index
 		}
 
 		operations = append(operations, rawOp.Operation)
@@ -102,12 +100,12 @@ func (c *core) GetIdentityDefaultTransfer(ctx context.Context, confirmationID, o
 	signature := hexutil.MustDecode(confirmation.SignatureECDSA)
 	signature[64] += 27
 
+	result := IdentityTransferDetails{OpIndex: operationID}
+
 	result.Proof, err = proofArgs.Pack(pathHashes, signature)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encode the proof")
 	}
-
-	c.log.Debugf("Generated proof: %s", hexutil.Encode(result.Proof))
 
 	return &result, nil
 }

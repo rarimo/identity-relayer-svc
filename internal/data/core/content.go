@@ -102,7 +102,7 @@ func (c *core) getTransferContent(op rarimo.Operation) (merkle.Content, error) {
 	}
 
 	content, err := pkg.GetTransferContent(collectionResp.Collection, collectionDataResp.Data, itemResp.Item, bridgeparams, transfer)
-	return content, errors.Wrap(err, "error creating content")
+	return *content, errors.Wrap(err, "error creating content")
 }
 
 func (c *core) getFeeManagementContent(op rarimo.Operation) (merkle.Content, error) {
@@ -122,7 +122,7 @@ func (c *core) getFeeManagementContent(op rarimo.Operation) (merkle.Content, err
 	}
 
 	content, err := pkg.GetFeeTokenManagementContent(feeparams, manage)
-	return content, errors.Wrap(err, "error creating content")
+	return *content, errors.Wrap(err, "error creating content")
 }
 
 func (c *core) getContractUpgradeContent(op rarimo.Operation) (merkle.Content, error) {
@@ -137,7 +137,7 @@ func (c *core) getContractUpgradeContent(op rarimo.Operation) (merkle.Content, e
 	}
 
 	content, err := pkg.GetContractUpgradeContent(networkResp.Params, upgrade)
-	return content, errors.Wrap(err, "error creating content")
+	return *content, errors.Wrap(err, "error creating content")
 }
 
 func (c *core) getIdentityDefaultTransferContent(op rarimo.Operation) (merkle.Content, error) {
@@ -147,5 +147,5 @@ func (c *core) getIdentityDefaultTransferContent(op rarimo.Operation) (merkle.Co
 	}
 
 	content, err := pkg.GetIdentityDefaultTransferContent(transfer)
-	return content, errors.Wrap(err, "error creating content")
+	return *content, errors.Wrap(err, "error creating content")
 }
