@@ -50,6 +50,8 @@ func NewCore(cfg config.Config) Core {
 }
 
 func (c *core) GetIdentityDefaultTransfer(ctx context.Context, confirmationID, operationID string) (*IdentityTransferDetails, error) {
+	c.log.Debugf("Starting proof generation for operation: %s", operationID)
+
 	confirmation, err := c.GetConfirmation(ctx, confirmationID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch the confirmation")
@@ -86,7 +88,11 @@ func (c *core) GetIdentityDefaultTransfer(ctx context.Context, confirmationID, o
 
 	tree := merkle.NewTree(crypto.Keccak256, contents...)
 
+	c.log.Debugf("Reconstructed tree root: %s", hexutil.Encode(tree.Root()))
+
 	path, _ := tree.Path(targetContent)
+
+	c.log.Debugf("Reconstructed path length: %d", len(path))
 
 	pathHashes := make([]common.Hash, 0, len(path))
 	for _, p := range path {
@@ -100,6 +106,8 @@ func (c *core) GetIdentityDefaultTransfer(ctx context.Context, confirmationID, o
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to encode the proof")
 	}
+
+	c.log.Debugf("Generated proof: %s", hexutil.Encode(result.Proof))
 
 	return &result, nil
 }

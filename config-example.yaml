@@ -30,5 +30,4 @@ evm:
 relay:
   target_chain: "Goerli"
   insta_submit_enabled: false
-  insta_submit_op: ""
   insta_submit_conf: ""

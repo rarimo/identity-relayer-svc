@@ -56,9 +56,9 @@ func newScheduler(cfg config.Config) *scheduler {
 func RunInstaScheduler(cfg config.Config, ctx context.Context) {
 	if c := cfg.Relay(); c.InstaSubmitEnabled {
 		s := newScheduler(cfg)
-		s.log.Infof("Performing insta submitting for index=%s, conf=%s", c.InstaSubmitOperationId, c.InstaSubmitConfirmationId)
+		s.log.Infof("Performing insta submitting for conf=%s", c.InstaSubmitConfirmationId)
 
-		if err := s.ScheduleRelays(ctx, c.InstaSubmitConfirmationId, []string{c.InstaSubmitOperationId}); err != nil {
+		if err := s.ScheduleRelays(ctx, c.InstaSubmitConfirmationId); err != nil {
 			s.log.WithError(err).Error("failed to schedule")
 		}
 	}
@@ -91,13 +91,10 @@ func (s *scheduler) run(ctx context.Context) error {
 			return ctx.Err()
 		case c := <-out:
 			s.log.Info("New confirmation found")
-
-			index := c.Events[fmt.Sprintf("%s.%s", rarimocore.EventTypeOperationSigned, rarimocore.AttributeKeyOperationId)][0]
 			confirmation := c.Events[fmt.Sprintf("%s.%s", rarimocore.EventTypeOperationSigned, rarimocore.AttributeKeyConfirmationId)][0]
+			s.log.Infof("New confirmation for identity found %s", confirmation)
 
-			s.log.Infof("New operation found index=%s, conf=%s", index, confirmation)
-
-			if err := s.ScheduleRelays(ctx, confirmation, []string{index}); err != nil {
+			if err := s.ScheduleRelays(ctx, confirmation); err != nil {
 				s.log.WithError(err).Error("failed to schedule")
 			}
 		}
@@ -107,21 +104,24 @@ func (s *scheduler) run(ctx context.Context) error {
 func (s *scheduler) ScheduleRelays(
 	ctx context.Context,
 	confirmationID string,
-	operationIndexes []string,
 ) error {
 	log := s.log.WithField("merkle_root", confirmationID)
 	log.Info("processing a confirmation")
 
 	rawTasks := [][]byte{}
 
-	for _, index := range operationIndexes {
+	rawConf, err := s.rarimocore.Confirmation(ctx, &rarimocore.QueryGetConfirmationRequest{Root: confirmationID})
+	if err != nil {
+		return errors.Wrap(err, "failed to get confirmation")
+	}
+
+	for _, index := range rawConf.Confirmation.Indexes {
 		operation, err := s.rarimocore.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: index})
 		if err != nil {
 			return errors.Wrap(err, "failed to get operation")
 		}
 
-		switch operation.Operation.OperationType {
-		case rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER:
+		if operation.Operation.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
 			transfer, err := s.core.GetIdentityDefaultTransfer(ctx, confirmationID, operation.Operation.Index)
 			if err != nil {
 				return errors.Wrap(err, "failed to get identity default transfer", logan.F{
