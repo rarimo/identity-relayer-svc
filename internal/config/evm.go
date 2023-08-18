@@ -32,7 +32,7 @@ type EVM struct {
 
 type EVMChain struct {
 	Name                string            `fig:"name,required"`
-	BridgeAddress       common.Address    `fig:"contract_address,required"`
+	ContractAddress     common.Address    `fig:"contract_address,required"`
 	SubmitterPrivateKey *ecdsa.PrivateKey `fig:"submitter_private_key,required"`
 	SubmitterAddress    common.Address    `fig:"-"`
 	RPC                 *ethclient.Client `fig:"-"`

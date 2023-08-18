@@ -1,18 +1,13 @@
 log:
+  level: info
   disable_sentry: true
 
 listener:
   addr: :8000
 
-cop:
-  disabled: true
-  endpoint: "http://..."
-  upstream: "http://..."
-  service_name: relayer-svc
-  service_port: 80
+db:
+  url: "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
 
-redis:
-  addr: localhost:6379
 
 core:
   addr: tcp://127.0.0.1:26657
@@ -29,5 +24,4 @@ evm:
 
 relay:
   target_chain: "Goerli"
-  insta_submit_enabled: false
-  insta_submit_conf: ""
+  catchup_disabled: true

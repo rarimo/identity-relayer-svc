@@ -8,9 +8,8 @@ import (
 )
 
 type RelayConfig struct {
-	TargetChain               string `fig:"target_chain,required"`
-	InstaSubmitEnabled        bool   `fig:"insta_submit_enabled,required"`
-	InstaSubmitConfirmationId string `fig:"insta_submit_conf"`
+	TargetChain     string `fig:"target_chain,required"`
+	CatchupDisabled bool   `fig:"catchup_disabled"`
 }
 
 func (c *config) Relay() RelayConfig {

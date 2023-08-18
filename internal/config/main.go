@@ -3,12 +3,12 @@ package config
 import (
 	"gitlab.com/distributed_lab/kit/comfig"
 	"gitlab.com/distributed_lab/kit/kv"
-	"gitlab.com/rarimo/relayer-svc/internal/data/redis"
+	"gitlab.com/distributed_lab/kit/pgdb"
 )
 
 type Config interface {
 	comfig.Logger
-	redis.Rediserer
+	pgdb.Databaser
 	Tenderminter
 	Cosmoser
 	EVMer
@@ -18,7 +18,8 @@ type Config interface {
 
 type config struct {
 	comfig.Logger
-	redis.Rediserer
+	pgdb.Databaser
+
 	getter kv.Getter
 	Tenderminter
 	Cosmoser
@@ -32,7 +33,7 @@ func New(getter kv.Getter) Config {
 	return &config{
 		getter:       getter,
 		Logger:       logger,
-		Rediserer:    redis.NewRediserer(getter, logger.Log()),
+		Databaser:    pgdb.NewDatabaser(getter),
 		Tenderminter: NewTenderminter(getter),
 		Cosmoser:     NewCosmoser(getter),
 		EVMer:        NewEVMer(getter),

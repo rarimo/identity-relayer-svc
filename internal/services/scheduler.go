@@ -5,22 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/adjust/rmq/v5"
-	client "github.com/cosmos/cosmos-sdk/types/tx"
+	"github.com/cosmos/cosmos-sdk/types/query"
 	"github.com/tendermint/tendermint/rpc/client/http"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	"gitlab.com/distributed_lab/running"
+	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/pkg"
 	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
 	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 	"gitlab.com/rarimo/relayer-svc/internal/config"
 	"gitlab.com/rarimo/relayer-svc/internal/data"
-	"gitlab.com/rarimo/relayer-svc/internal/data/core"
-	"gitlab.com/rarimo/relayer-svc/internal/services/relayer"
-)
-
-const (
-	DepositChanSize = 100
+	"gitlab.com/rarimo/relayer-svc/internal/data/pg"
 )
 
 type Scheduler interface {
@@ -34,38 +29,30 @@ type Scheduler interface {
 type scheduler struct {
 	client       *http.HTTP
 	log          *logan.Entry
-	cosmos       client.ServiceClient
-	core         core.Core
 	tokenmanager tokenmanager.QueryClient
 	rarimocore   rarimocore.QueryClient
-	relayQueue   rmq.Queue
+	storage      *pg.Storage
 }
 
 func newScheduler(cfg config.Config) *scheduler {
 	return &scheduler{
 		client:       cfg.Tendermint(),
 		log:          cfg.Log().WithField("service", "scheduler"),
-		cosmos:       client.NewServiceClient(cfg.Cosmos()),
 		tokenmanager: tokenmanager.NewQueryClient(cfg.Cosmos()),
 		rarimocore:   rarimocore.NewQueryClient(cfg.Cosmos()),
-		relayQueue:   cfg.Redis().OpenRelayQueue(),
-		core:         core.NewCore(cfg),
-	}
-}
-
-func RunInstaScheduler(cfg config.Config, ctx context.Context) {
-	if c := cfg.Relay(); c.InstaSubmitEnabled {
-		s := newScheduler(cfg)
-		s.log.Infof("Performing insta submitting for conf=%s", c.InstaSubmitConfirmationId)
-
-		if err := s.ScheduleRelays(ctx, c.InstaSubmitConfirmationId); err != nil {
-			s.log.WithError(err).Error("failed to schedule")
-		}
+		storage:      pg.New(cfg.DB()),
 	}
 }
 
 func RunScheduler(cfg config.Config, ctx context.Context) {
 	s := newScheduler(cfg)
+
+	if !cfg.Relay().CatchupDisabled {
+		if err := s.catchup(ctx); err != nil {
+
+		}
+	}
+
 	running.WithBackOff(
 		ctx, s.log, "scheduler", s.run,
 		5*time.Second, 5*time.Second, 5*time.Second,
@@ -73,13 +60,17 @@ func RunScheduler(cfg config.Config, ctx context.Context) {
 }
 
 func (s *scheduler) run(ctx context.Context) error {
+	s.log.Info("Starting subscription")
+	defer s.log.Info("Subscription finished")
+
+	const depositChanSize = 100
+
 	out, err := s.client.Subscribe(
 		ctx,
 		"scheduler",
 		"tm.event='Tx' AND operation_signed.operation_type='IDENTITY_DEFAULT_TRANSFER'",
-		DepositChanSize,
+		depositChanSize,
 	)
-	s.log.Info("Listening for signed identities")
 
 	if err != nil {
 		return errors.Wrap(err, "can not subscribe")
@@ -94,52 +85,91 @@ func (s *scheduler) run(ctx context.Context) error {
 			confirmation := c.Events[fmt.Sprintf("%s.%s", rarimocore.EventTypeOperationSigned, rarimocore.AttributeKeyConfirmationId)][0]
 			s.log.Infof("New confirmation for identity found %s", confirmation)
 
-			if err := s.ScheduleRelays(ctx, confirmation); err != nil {
-				s.log.WithError(err).Error("failed to schedule")
+			if err := s.process(ctx, confirmation); err != nil {
+				s.log.WithError(err).Error("failed to process confirmation")
 			}
 		}
 	}
 }
 
-func (s *scheduler) ScheduleRelays(
+func (s *scheduler) catchup(ctx context.Context) error {
+	s.log.Info("Starting catchup")
+	defer s.log.Info("Catchup finished")
+
+	var nextKey []byte
+
+	for {
+		operations, err := s.rarimocore.OperationAll(context.TODO(), &rarimocore.QueryAllOperationRequest{Pagination: &query.PageRequest{Key: nextKey}})
+		if err != nil {
+			panic(err)
+		}
+
+		for _, op := range operations.Operation {
+			if op.Status == rarimocore.OpStatus_SIGNED && op.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
+				if err := s.trySave(ctx, op); err != nil {
+					return err
+				}
+			}
+		}
+
+		nextKey = operations.Pagination.NextKey
+		if nextKey == nil {
+			return nil
+		}
+	}
+}
+
+func (s *scheduler) process(
 	ctx context.Context,
 	confirmationID string,
 ) error {
-	log := s.log.WithField("merkle_root", confirmationID)
+	log := s.log.WithField("confirmation_id", confirmationID)
 	log.Info("processing a confirmation")
-
-	rawTasks := [][]byte{}
 
 	rawConf, err := s.rarimocore.Confirmation(ctx, &rarimocore.QueryGetConfirmationRequest{Root: confirmationID})
 	if err != nil {
-		return errors.Wrap(err, "failed to get confirmation")
+		return errors.Wrap(err, "failed to get confirmation", logan.F{
+			"confirmation_id": confirmationID,
+		})
 	}
 
 	for _, index := range rawConf.Confirmation.Indexes {
 		operation, err := s.rarimocore.Operation(ctx, &rarimocore.QueryGetOperationRequest{Index: index})
 		if err != nil {
-			return errors.Wrap(err, "failed to get operation")
+			return errors.Wrap(err, "failed to get operation", logan.F{
+				"operation_index": operation.Operation.Index,
+			})
 		}
 
-		if operation.Operation.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
-			transfer, err := s.core.GetIdentityDefaultTransfer(ctx, confirmationID, operation.Operation.Index)
-			if err != nil {
-				return errors.Wrap(err, "failed to get identity default transfer", logan.F{
-					"confirmation_id": confirmationID,
-					"operation_index": operation.Operation.Index,
-				})
-			}
-
-			rawTasks = append(rawTasks, data.NewRelayIdentityTransferTask(*transfer, relayer.MaxRetries).Marshal())
+		if err := s.trySave(ctx, operation.Operation); err != nil {
+			return err
 		}
 	}
-
-	if err := s.relayQueue.PublishBytes(rawTasks...); err != nil {
-		return errors.Wrap(err, "failed to publish tasks")
-	}
-
-	log.Infof("scheduled %d transfers for relay", len(rawTasks))
 
 	return nil
 
+}
+
+func (s *scheduler) trySave(ctx context.Context, operation rarimocore.Operation) error {
+	if operation.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
+		op, err := pkg.GetIdentityDefaultTransfer(operation)
+		if err != nil {
+			return errors.Wrap(err, "failed to parse identity default transfer", logan.F{
+				"operation_index": operation.Index,
+			})
+		}
+
+		err = s.storage.StateQ().UpsertCtx(ctx, &data.State{
+			ID:        op.StateHash,
+			Operation: op.Id,
+		})
+
+		if err != nil {
+			return errors.Wrap(err, "failed to upsert identity default transfer", logan.F{
+				"operation_index": operation.Index,
+			})
+		}
+	}
+
+	return nil
 }
