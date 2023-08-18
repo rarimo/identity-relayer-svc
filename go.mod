@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
-	github.com/cosmos/cosmos-sdk v0.46.12 // indirect
+	github.com/cosmos/cosmos-sdk v0.46.12
 	github.com/ethereum/go-ethereum v1.10.26
 	github.com/spf13/cast v1.5.1
 	github.com/stretchr/testify v1.8.3 // indirect
@@ -21,7 +21,10 @@ require (
 
 require (
 	github.com/ava-labs/subnet-evm v0.2.4
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.2
 	github.com/rubenv/sql-migrate v1.5.2
+	google.golang.org/genproto/googleapis/api v0.0.0-20230726155614-23370e0ffb3e
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
@@ -134,9 +137,7 @@ require (
 	golang.org/x/term v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	google.golang.org/genproto v0.0.0-20230706204954-ccb25ca9f130 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20230726155614-23370e0ffb3e // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230726155614-23370e0ffb3e // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

@@ -2,15 +2,14 @@ package cli
 
 import (
 	"context"
-	"sync"
 
 	"gitlab.com/rarimo/relayer-svc/internal/services"
+	"gitlab.com/rarimo/relayer-svc/internal/services/scheduler"
 
 	"gitlab.com/rarimo/relayer-svc/internal/config"
 
 	"github.com/alecthomas/kingpin"
 	"gitlab.com/distributed_lab/kit/kv"
-	"gitlab.com/distributed_lab/logan/v2/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 )
 
@@ -23,25 +22,11 @@ func Run(args []string) bool {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	cfg := config.New(kv.MustFromEnv())
 	log := cfg.Log()
 
 	log.Info("Running service")
-
-	var wg sync.WaitGroup
-	run := func(f func(config.Config, context.Context)) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			defer func() {
-				if rvr := recover(); rvr != nil {
-					err := errors.FromPanic(rvr)
-					logan.New().WithError(err).Fatal("one of the services panicked")
-				}
-			}()
-			f(cfg, ctx)
-		}()
-	}
 
 	app := kingpin.New("relayer-svc", "")
 
@@ -60,8 +45,8 @@ func Run(args []string) bool {
 
 	switch cmd {
 	case runAllCmd.FullCommand():
-		log.Info("starting all services")
-		run(services.RunScheduler)
+		go scheduler.NewService(cfg).Run(ctx)
+		err = services.NewServer(cfg).Run()
 	case migrateUpCmd.FullCommand():
 		err = MigrateUp(cfg)
 	case migrateDownCmd.FullCommand():

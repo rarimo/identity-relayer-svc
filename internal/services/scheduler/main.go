@@ -1,4 +1,4 @@
-package services
+package scheduler
 
 import (
 	"context"
@@ -12,54 +12,43 @@ import (
 	"gitlab.com/distributed_lab/running"
 	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/pkg"
 	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
-	tokenmanager "gitlab.com/rarimo/rarimo-core/x/tokenmanager/types"
 	"gitlab.com/rarimo/relayer-svc/internal/config"
 	"gitlab.com/rarimo/relayer-svc/internal/data"
 	"gitlab.com/rarimo/relayer-svc/internal/data/pg"
 )
 
-type Scheduler interface {
-	ScheduleRelays(
-		ctx context.Context,
-		confirmationID string,
-		operationIndexes []string,
-	) error
+type Service struct {
+	client          *http.HTTP
+	log             *logan.Entry
+	rarimocore      rarimocore.QueryClient
+	storage         *pg.Storage
+	catchupDisabled bool
 }
 
-type scheduler struct {
-	client       *http.HTTP
-	log          *logan.Entry
-	tokenmanager tokenmanager.QueryClient
-	rarimocore   rarimocore.QueryClient
-	storage      *pg.Storage
-}
-
-func newScheduler(cfg config.Config) *scheduler {
-	return &scheduler{
-		client:       cfg.Tendermint(),
-		log:          cfg.Log().WithField("service", "scheduler"),
-		tokenmanager: tokenmanager.NewQueryClient(cfg.Cosmos()),
-		rarimocore:   rarimocore.NewQueryClient(cfg.Cosmos()),
-		storage:      pg.New(cfg.DB()),
+func NewService(cfg config.Config) *Service {
+	return &Service{
+		client:          cfg.Tendermint(),
+		log:             cfg.Log(),
+		rarimocore:      rarimocore.NewQueryClient(cfg.Cosmos()),
+		storage:         pg.New(cfg.DB()),
+		catchupDisabled: cfg.Relay().CatchupDisabled,
 	}
 }
 
-func RunScheduler(cfg config.Config, ctx context.Context) {
-	s := newScheduler(cfg)
-
-	if !cfg.Relay().CatchupDisabled {
+func (s *Service) Run(ctx context.Context) {
+	if !s.catchupDisabled {
 		if err := s.catchup(ctx); err != nil {
-
+			s.log.WithError(err).Error("failed to catchup")
 		}
 	}
 
 	running.WithBackOff(
-		ctx, s.log, "scheduler", s.run,
+		ctx, s.log, "Service", s.run,
 		5*time.Second, 5*time.Second, 5*time.Second,
 	)
 }
 
-func (s *scheduler) run(ctx context.Context) error {
+func (s *Service) run(ctx context.Context) error {
 	s.log.Info("Starting subscription")
 	defer s.log.Info("Subscription finished")
 
@@ -67,7 +56,7 @@ func (s *scheduler) run(ctx context.Context) error {
 
 	out, err := s.client.Subscribe(
 		ctx,
-		"scheduler",
+		"Service",
 		"tm.event='Tx' AND operation_signed.operation_type='IDENTITY_DEFAULT_TRANSFER'",
 		depositChanSize,
 	)
@@ -92,7 +81,7 @@ func (s *scheduler) run(ctx context.Context) error {
 	}
 }
 
-func (s *scheduler) catchup(ctx context.Context) error {
+func (s *Service) catchup(ctx context.Context) error {
 	s.log.Info("Starting catchup")
 	defer s.log.Info("Catchup finished")
 
@@ -119,7 +108,7 @@ func (s *scheduler) catchup(ctx context.Context) error {
 	}
 }
 
-func (s *scheduler) process(
+func (s *Service) process(
 	ctx context.Context,
 	confirmationID string,
 ) error {
@@ -150,7 +139,7 @@ func (s *scheduler) process(
 
 }
 
-func (s *scheduler) trySave(ctx context.Context, operation rarimocore.Operation) error {
+func (s *Service) trySave(ctx context.Context, operation rarimocore.Operation) error {
 	if operation.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
 		op, err := pkg.GetIdentityDefaultTransfer(operation)
 		if err != nil {

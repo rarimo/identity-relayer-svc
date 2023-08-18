@@ -9,6 +9,7 @@ import (
 type Config interface {
 	comfig.Logger
 	pgdb.Databaser
+	comfig.Listenerer
 	Tenderminter
 	Cosmoser
 	EVMer
@@ -19,6 +20,7 @@ type Config interface {
 type config struct {
 	comfig.Logger
 	pgdb.Databaser
+	comfig.Listenerer
 
 	getter kv.Getter
 	Tenderminter
@@ -37,5 +39,6 @@ func New(getter kv.Getter) Config {
 		Tenderminter: NewTenderminter(getter),
 		Cosmoser:     NewCosmoser(getter),
 		EVMer:        NewEVMer(getter),
+		Listenerer:   comfig.NewListenerer(getter),
 	}
 }

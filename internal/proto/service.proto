@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "gitlab.com/rarimo/relayer-svc/internal/types";
+
+import "google/protobuf/any.proto";
+import "google/api/annotations.proto";
+
+service Service {
+  rpc Relay(MsgRelayRequest) returns (MsgRelayResponse){
+    option (google.api.http) = {
+      post: "/integrations/relayer/relay"
+    };
+  };
+}
+
+message MsgRelayRequest {
+  string state = 1;
+  string chain = 2;
+}
+
+message MsgRelayResponse {
+  string tx = 1;
+}

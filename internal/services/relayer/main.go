@@ -4,9 +4,7 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	evmtypes "github.com/ethereum/go-ethereum/core/types"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
 	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
@@ -21,10 +19,6 @@ var (
 	ErrChainNotFound = errors.New("chain not found")
 	ErrEntryNotFound = errors.New("entry not found")
 )
-
-type StateTransitioner interface {
-	SignedTransitState(opts *bind.TransactOpts, prevState_ *big.Int, prevGist_ *big.Int, stateInfo_ contracts.ILightweightStateV2StateData, gistRootInfo_ contracts.ILightweightStateV2GistRootData, signature_ []byte) (*evmtypes.Transaction, error)
-}
 
 type Service struct {
 	log     *logan.Entry
