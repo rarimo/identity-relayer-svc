@@ -141,6 +141,8 @@ func (s *Service) process(
 
 func (s *Service) trySave(ctx context.Context, operation rarimocore.Operation) error {
 	if operation.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
+		s.log.WithField("operation_index", operation.Index).Info("Trying to save op")
+
 		op, err := pkg.GetIdentityDefaultTransfer(operation)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse identity default transfer", logan.F{
@@ -150,7 +152,7 @@ func (s *Service) trySave(ctx context.Context, operation rarimocore.Operation) e
 
 		err = s.storage.StateQ().UpsertCtx(ctx, &data.State{
 			ID:        op.StateHash,
-			Operation: op.Id,
+			Operation: operation.Index,
 		})
 
 		if err != nil {

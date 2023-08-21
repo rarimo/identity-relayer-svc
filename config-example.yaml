@@ -23,5 +23,4 @@ evm:
       rpc: https://goerli.infura.io/v3/2a6a01d5162c45939a09d96bea88d358
 
 relay:
-  target_chain: "Goerli"
   catchup_disabled: true

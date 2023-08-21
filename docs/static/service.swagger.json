@@ -51,12 +51,65 @@
           "Service"
         ]
       }
+    },
+    "/integrations/relayer/relay/{state}": {
+      "get": {
+        "operationId": "Service_Relays",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/MsgRelaysResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "state",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Service"
+        ]
+      }
     }
   },
   "definitions": {
     "MsgRelayResponse": {
       "type": "object",
       "properties": {
+        "tx": {
+          "type": "string"
+        }
+      }
+    },
+    "MsgRelaysResponse": {
+      "type": "object",
+      "properties": {
+        "relays": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/Transition"
+          }
+        }
+      }
+    },
+    "Transition": {
+      "type": "object",
+      "properties": {
+        "chain": {
+          "type": "string"
+        },
         "tx": {
           "type": "string"
         }

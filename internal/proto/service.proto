@@ -11,6 +11,12 @@ service Service {
       post: "/integrations/relayer/relay"
     };
   };
+
+  rpc Relays(MsgRelaysRequest) returns (MsgRelaysResponse){
+    option (google.api.http) = {
+      get: "/integrations/relayer/relay/{state}"
+    };
+  };
 }
 
 message MsgRelayRequest {
@@ -20,4 +26,17 @@ message MsgRelayRequest {
 
 message MsgRelayResponse {
   string tx = 1;
+}
+
+message MsgRelaysRequest {
+  string state = 1;
+}
+
+message Transition {
+  string chain = 1;
+  string tx = 2;
+}
+
+message MsgRelaysResponse {
+  repeated Transition relays = 1;
 }

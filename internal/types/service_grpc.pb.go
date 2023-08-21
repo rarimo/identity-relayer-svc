@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ServiceClient interface {
 	Relay(ctx context.Context, in *MsgRelayRequest, opts ...grpc.CallOption) (*MsgRelayResponse, error)
+	Relays(ctx context.Context, in *MsgRelaysRequest, opts ...grpc.CallOption) (*MsgRelaysResponse, error)
 }
 
 type serviceClient struct {
@@ -42,11 +43,21 @@ func (c *serviceClient) Relay(ctx context.Context, in *MsgRelayRequest, opts ...
 	return out, nil
 }
 
+func (c *serviceClient) Relays(ctx context.Context, in *MsgRelaysRequest, opts ...grpc.CallOption) (*MsgRelaysResponse, error) {
+	out := new(MsgRelaysResponse)
+	err := c.cc.Invoke(ctx, "/Service/Relays", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServiceServer is the server API for Service service.
 // All implementations should embed UnimplementedServiceServer
 // for forward compatibility
 type ServiceServer interface {
 	Relay(context.Context, *MsgRelayRequest) (*MsgRelayResponse, error)
+	Relays(context.Context, *MsgRelaysRequest) (*MsgRelaysResponse, error)
 }
 
 // UnimplementedServiceServer should be embedded to have forward compatible implementations.
@@ -55,6 +66,9 @@ type UnimplementedServiceServer struct {
 
 func (UnimplementedServiceServer) Relay(context.Context, *MsgRelayRequest) (*MsgRelayResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Relay not implemented")
+}
+func (UnimplementedServiceServer) Relays(context.Context, *MsgRelaysRequest) (*MsgRelaysResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Relays not implemented")
 }
 
 // UnsafeServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -86,6 +100,24 @@ func _Service_Relay_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Service_Relays_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRelaysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServiceServer).Relays(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Service/Relays",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServiceServer).Relays(ctx, req.(*MsgRelaysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Service_ServiceDesc is the grpc.ServiceDesc for Service service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -96,6 +128,10 @@ var Service_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Relay",
 			Handler:    _Service_Relay_Handler,
+		},
+		{
+			MethodName: "Relays",
+			Handler:    _Service_Relays_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -14,7 +14,7 @@ create table transitions
     chain text             not null
 );
 
-create index transitions_index on transitions (state, chain);
+create index transitions_index on transitions (state);
 
 -- +migrate Down
 drop table states;

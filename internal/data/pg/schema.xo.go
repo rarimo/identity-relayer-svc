@@ -411,21 +411,21 @@ func (q StateQ) StateByID(id string, isForUpdate bool) (*data.State, error) {
 	return q.StateByIDCtx(context.Background(), id, isForUpdate)
 }
 
-// TransitionsByStateChainCtx retrieves a row from 'public.transitions' as a Transition.
+// TransitionsByStateCtx retrieves a row from 'public.transitions' as a Transition.
 //
 // Generated from index 'transitions_index'.
-func (q TransitionQ) TransitionsByStateChainCtx(ctx context.Context, state, chain string, isForUpdate bool) ([]data.Transition, error) {
+func (q TransitionQ) TransitionsByStateCtx(ctx context.Context, state string, isForUpdate bool) ([]data.Transition, error) {
 	// query
 	sqlstr := `SELECT ` +
 		`tx, state, chain ` +
 		`FROM public.transitions ` +
-		`WHERE state = $1 AND chain = $2`
+		`WHERE state = $1`
 	// run
 	if isForUpdate {
 		sqlstr += " for update"
 	}
 	var res []data.Transition
-	err := q.db.SelectRawContext(ctx, &res, sqlstr, state, chain)
+	err := q.db.SelectRawContext(ctx, &res, sqlstr, state)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to exec select")
 	}
@@ -433,11 +433,11 @@ func (q TransitionQ) TransitionsByStateChainCtx(ctx context.Context, state, chai
 	return res, nil
 }
 
-// TransitionsByStateChain retrieves a row from 'public.transitions' as a Transition.
+// TransitionsByState retrieves a row from 'public.transitions' as a Transition.
 //
 // Generated from index 'transitions_index'.
-func (q TransitionQ) TransitionsByStateChain(state, chain string, isForUpdate bool) ([]data.Transition, error) {
-	return q.TransitionsByStateChainCtx(context.Background(), state, chain, isForUpdate)
+func (q TransitionQ) TransitionsByState(state string, isForUpdate bool) ([]data.Transition, error) {
+	return q.TransitionsByStateCtx(context.Background(), state, isForUpdate)
 }
 
 // TransitionByTxCtx retrieves a row from 'public.transitions' as a Transition.

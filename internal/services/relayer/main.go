@@ -37,6 +37,24 @@ func NewService(cfg config.Config) *Service {
 	}
 }
 
+func (c *Service) Relays(ctx context.Context, state string) ([]data.Transition, error) {
+	entry, err := c.storage.StateQ().StateByID(state, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get entry by state")
+	}
+
+	if entry == nil {
+		return nil, ErrEntryNotFound
+	}
+
+	transitions, err := c.storage.TransitionQ().TransitionsByState(state, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get transition")
+	}
+
+	return transitions, nil
+}
+
 func (c *Service) Relay(ctx context.Context, state string, chainName string) (string, error) {
 	chain, ok := c.chains.GetChainByName(chainName)
 	if !ok {
@@ -52,16 +70,30 @@ func (c *Service) Relay(ctx context.Context, state string, chainName string) (st
 		return "", ErrEntryNotFound
 	}
 
-	transition, err := c.storage.TransitionQ().TransitionsByStateChain(state, chainName, false)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get transition")
-	}
-
-	if transition != nil {
-		return "", ErrAlreadySubmitted
+	if err := c.checkTransitionNotExist(state, chainName); err != nil {
+		return "", err
 	}
 
 	return c.processIdentityDefaultTransfer(ctx, chain, entry)
+}
+
+func (c *Service) checkTransitionNotExist(state, chain string) error {
+	transitions, err := c.storage.TransitionQ().TransitionsByState(state, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to get transition")
+	}
+
+	if len(transitions) == 0 {
+		return nil
+	}
+
+	for _, transition := range transitions {
+		if transition.Chain == chain {
+			return ErrAlreadySubmitted
+		}
+	}
+
+	return nil
 }
 
 func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *config.EVMChain, entry *data.State) (string, error) {
