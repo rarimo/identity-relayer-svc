@@ -73,3 +73,11 @@ type State struct {
 	Confirmation string `db:"confirmation"` // confirmation
 
 }
+
+// Transition represents a row from 'public.transitions'.
+type Transition struct {
+	Tx    string `db:"tx"`    // tx
+	State string `db:"state"` // state
+	Chain string `db:"chain"` // chain
+
+}

@@ -219,6 +219,97 @@ func (q StateQ) DeleteCtx(ctx context.Context, s *data.State) error {
 // Delete deletes the State from the database.
 func (q StateQ) Delete(s *data.State) error {
 	return q.DeleteCtx(context.Background(), s)
+} // TransitionQ represents helper struct to access row of 'transitions'.
+type TransitionQ struct {
+	db *pgdb.DB
+}
+
+// NewTransitionQ  - creates new instance
+func NewTransitionQ(db *pgdb.DB) *TransitionQ {
+	return &TransitionQ{
+		db,
+	}
+}
+
+// TransitionQ  - creates new instance of TransitionQ
+func (s Storage) TransitionQ() *TransitionQ {
+	return NewTransitionQ(s.DB())
+}
+
+var colsTransition = `tx, state, chain`
+
+// InsertCtx inserts a Transition to the database.
+func (q TransitionQ) InsertCtx(ctx context.Context, t *data.Transition) error {
+	// sql insert query, primary key must be provided
+	sqlstr := `INSERT INTO public.transitions (` +
+		`tx, state, chain` +
+		`) VALUES (` +
+		`$1, $2, $3` +
+		`)`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, t.Tx, t.State, t.Chain)
+	return errors.Wrap(err, "failed to execute insert query")
+}
+
+// Insert insert a Transition to the database.
+func (q TransitionQ) Insert(t *data.Transition) error {
+	return q.InsertCtx(context.Background(), t)
+}
+
+// UpdateCtx updates a Transition in the database.
+func (q TransitionQ) UpdateCtx(ctx context.Context, t *data.Transition) error {
+	// update with composite primary key
+	sqlstr := `UPDATE public.transitions SET ` +
+		`state = $1, chain = $2 ` +
+		`WHERE tx = $3`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, t.State, t.Chain, t.Tx)
+	return errors.Wrap(err, "failed to execute update")
+}
+
+// Update updates a Transition in the database.
+func (q TransitionQ) Update(t *data.Transition) error {
+	return q.UpdateCtx(context.Background(), t)
+}
+
+// UpsertCtx performs an upsert for Transition.
+func (q TransitionQ) UpsertCtx(ctx context.Context, t *data.Transition) error {
+	// upsert
+	sqlstr := `INSERT INTO public.transitions (` +
+		`tx, state, chain` +
+		`) VALUES (` +
+		`$1, $2, $3` +
+		`)` +
+		` ON CONFLICT (tx) DO ` +
+		`UPDATE SET ` +
+		`state = EXCLUDED.state, chain = EXCLUDED.chain `
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, t.Tx, t.State, t.Chain); err != nil {
+		return errors.Wrap(err, "failed to execute upsert stmt")
+	}
+	return nil
+}
+
+// Upsert performs an upsert for Transition.
+func (q TransitionQ) Upsert(t *data.Transition) error {
+	return q.UpsertCtx(context.Background(), t)
+}
+
+// DeleteCtx deletes the Transition from the database.
+func (q TransitionQ) DeleteCtx(ctx context.Context, t *data.Transition) error {
+	// delete with single primary key
+	sqlstr := `DELETE FROM public.transitions ` +
+		`WHERE tx = $1`
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, t.Tx); err != nil {
+		return errors.Wrap(err, "failed to exec delete stmt")
+	}
+	return nil
+}
+
+// Delete deletes the Transition from the database.
+func (q TransitionQ) Delete(t *data.Transition) error {
+	return q.DeleteCtx(context.Background(), t)
 }
 
 // GorpMigrationByIDCtx retrieves a row from 'public.gorp_migrations' as a GorpMigration.
@@ -318,4 +409,66 @@ func (q StateQ) StateByIDCtx(ctx context.Context, id string, isForUpdate bool) (
 // Generated from index 'states_pkey'.
 func (q StateQ) StateByID(id string, isForUpdate bool) (*data.State, error) {
 	return q.StateByIDCtx(context.Background(), id, isForUpdate)
+}
+
+// TransitionsByStateChainCtx retrieves a row from 'public.transitions' as a Transition.
+//
+// Generated from index 'transitions_index'.
+func (q TransitionQ) TransitionsByStateChainCtx(ctx context.Context, state, chain string, isForUpdate bool) ([]data.Transition, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`tx, state, chain ` +
+		`FROM public.transitions ` +
+		`WHERE state = $1 AND chain = $2`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res []data.Transition
+	err := q.db.SelectRawContext(ctx, &res, sqlstr, state, chain)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return res, nil
+}
+
+// TransitionsByStateChain retrieves a row from 'public.transitions' as a Transition.
+//
+// Generated from index 'transitions_index'.
+func (q TransitionQ) TransitionsByStateChain(state, chain string, isForUpdate bool) ([]data.Transition, error) {
+	return q.TransitionsByStateChainCtx(context.Background(), state, chain, isForUpdate)
+}
+
+// TransitionByTxCtx retrieves a row from 'public.transitions' as a Transition.
+//
+// Generated from index 'transitions_pkey'.
+func (q TransitionQ) TransitionByTxCtx(ctx context.Context, tx string, isForUpdate bool) (*data.Transition, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`tx, state, chain ` +
+		`FROM public.transitions ` +
+		`WHERE tx = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.Transition
+	err := q.db.GetRawContext(ctx, &res, sqlstr, tx)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// TransitionByTx retrieves a row from 'public.transitions' as a Transition.
+//
+// Generated from index 'transitions_pkey'.
+func (q TransitionQ) TransitionByTx(tx string, isForUpdate bool) (*data.Transition, error) {
+	return q.TransitionByTxCtx(context.Background(), tx, isForUpdate)
 }

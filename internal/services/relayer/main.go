@@ -16,8 +16,9 @@ import (
 )
 
 var (
-	ErrChainNotFound = errors.New("chain not found")
-	ErrEntryNotFound = errors.New("entry not found")
+	ErrChainNotFound    = errors.New("chain not found")
+	ErrEntryNotFound    = errors.New("entry not found")
+	ErrAlreadySubmitted = errors.New("state already transited")
 )
 
 type Service struct {
@@ -49,6 +50,15 @@ func (c *Service) Relay(ctx context.Context, state string, chainName string) (st
 
 	if entry == nil {
 		return "", ErrEntryNotFound
+	}
+
+	transition, err := c.storage.TransitionQ().TransitionsByStateChain(state, chainName, false)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get transition")
+	}
+
+	if transition != nil {
+		return "", ErrAlreadySubmitted
 	}
 
 	return c.processIdentityDefaultTransfer(ctx, chain, entry)
@@ -98,6 +108,17 @@ func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *con
 		return "", errors.Wrap(err, "failed to send state transition tx")
 	}
 
+	transition := data.Transition{
+		Tx:    tx.Hash().String(),
+		State: entry.ID,
+		Chain: chain.Name,
+	}
+
+	if err := c.storage.TransitionQ().Insert(&transition); err != nil {
+		c.log.WithError(err).Error("failed to create transition entry")
+	}
+
+	// TODO use that code as base if you need to check transaction result
 	//go func() {
 	//	log := c.log.WithField("state", entry.ID).WithField("operation_id", entry.Operation)
 	//

@@ -7,5 +7,15 @@ create table states
     confirmation text             not null
 );
 
+create table transitions
+(
+    tx    text primary key not null,
+    state text             not null,
+    chain text             not null
+);
+
+create index transitions_index on transitions (state, chain);
+
 -- +migrate Down
 drop table states;
+drop table transitions;
