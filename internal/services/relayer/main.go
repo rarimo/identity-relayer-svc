@@ -55,7 +55,7 @@ func (c *Service) Relays(ctx context.Context, state string) ([]data.Transition, 
 	return transitions, nil
 }
 
-func (c *Service) Relay(ctx context.Context, state string, chainName string) (string, error) {
+func (c *Service) Relay(ctx context.Context, state string, chainName string) (txhash string, err error) {
 	chain, ok := c.chains.GetChainByName(chainName)
 	if !ok {
 		return "", ErrChainNotFound
@@ -96,7 +96,7 @@ func (c *Service) checkTransitionNotExist(state, chain string) error {
 	return nil
 }
 
-func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *config.EVMChain, entry *data.State) (string, error) {
+func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *config.EVMChain, entry *data.State) (txhash string, err error) {
 	opts := chain.TransactorOpts()
 
 	nonce, err := chain.RPC.PendingNonceAt(context.TODO(), chain.SubmitterAddress)
@@ -106,7 +106,7 @@ func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *con
 
 	opts.Nonce = big.NewInt(int64(nonce))
 
-	opts.GasPrice, err = chain.RPC.SuggestGasPrice(context.TODO())
+	opts.GasPrice, err = chain.RPC.SuggestGasPrice(ctx)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get suggested gas price")
 	}

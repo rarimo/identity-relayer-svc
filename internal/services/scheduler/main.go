@@ -88,7 +88,7 @@ func (s *Service) catchup(ctx context.Context) error {
 	var nextKey []byte
 
 	for {
-		operations, err := s.rarimocore.OperationAll(context.TODO(), &rarimocore.QueryAllOperationRequest{Pagination: &query.PageRequest{Key: nextKey}})
+		operations, err := s.rarimocore.OperationAll(ctx, &rarimocore.QueryAllOperationRequest{Pagination: &query.PageRequest{Key: nextKey}})
 		if err != nil {
 			panic(err)
 		}
