@@ -35,16 +35,12 @@
         },
         "parameters": [
           {
-            "name": "state",
-            "in": "query",
-            "required": false,
-            "type": "string"
-          },
-          {
-            "name": "chain",
-            "in": "query",
-            "required": false,
-            "type": "string"
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RelayBody"
+            }
           }
         ],
         "tags": [
@@ -101,6 +97,17 @@
             "type": "object",
             "$ref": "#/definitions/Transition"
           }
+        }
+      }
+    },
+    "RelayBody": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string"
+        },
+        "chain": {
+          "type": "string"
         }
       }
     },

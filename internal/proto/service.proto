@@ -9,6 +9,7 @@ service Service {
   rpc Relay(MsgRelayRequest) returns (MsgRelayResponse){
     option (google.api.http) = {
       post: "/integrations/relayer/relay"
+      body: "body"
     };
   };
 
@@ -20,6 +21,10 @@ service Service {
 }
 
 message MsgRelayRequest {
+  RelayBody body = 1;
+}
+
+message RelayBody {
   string state = 1;
   string chain = 2;
 }
