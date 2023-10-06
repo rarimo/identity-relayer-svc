@@ -51,13 +51,16 @@ func (s *ServerImpl) Run() error {
 var _ types.ServiceServer = &ServerImpl{}
 
 func (s *ServerImpl) Relay(ctx context.Context, req *types.MsgRelayRequest) (*types.MsgRelayResponse, error) {
+	s.log.Infof("Relay request: state - %s; chain - %s", req.State, req.Chain)
 	tx, err := s.relayer.Relay(ctx, req.State, req.Chain)
 
 	if err != nil {
 		switch errors.Cause(err) {
 		case relayer.ErrEntryNotFound, relayer.ErrChainNotFound:
+			s.log.WithError(err).Debugf("request failed")
 			return nil, status.Errorf(codes.NotFound, err.Error())
 		case relayer.ErrAlreadySubmitted:
+			s.log.WithError(err).Debugf("request failed")
 			return nil, status.Errorf(
 				codes.InvalidArgument,
 				"can not resubmit state transition tx for state: %s on chain: %s", req.State, req.Chain,
