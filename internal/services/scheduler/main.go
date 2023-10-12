@@ -18,20 +18,33 @@ import (
 )
 
 type Service struct {
-	client          *http.HTTP
-	log             *logan.Entry
-	rarimocore      rarimocore.QueryClient
-	storage         *pg.Storage
-	catchupDisabled bool
+	client             *http.HTTP
+	log                *logan.Entry
+	rarimocore         rarimocore.QueryClient
+	storage            *pg.Storage
+	catchupDisabled    bool
+	filtrationDisabled bool
+	filterIds          map[string]struct{}
 }
 
 func NewService(cfg config.Config) *Service {
+	mp := func(arr []string) map[string]struct{} {
+		res := make(map[string]struct{}, len(arr))
+
+		for _, v := range arr {
+			res[v] = struct{}{}
+		}
+		return res
+	}
+
 	return &Service{
-		client:          cfg.Tendermint(),
-		log:             cfg.Log(),
-		rarimocore:      rarimocore.NewQueryClient(cfg.Cosmos()),
-		storage:         pg.New(cfg.DB()),
-		catchupDisabled: cfg.Relay().CatchupDisabled,
+		client:             cfg.Tendermint(),
+		log:                cfg.Log(),
+		rarimocore:         rarimocore.NewQueryClient(cfg.Cosmos()),
+		storage:            pg.New(cfg.DB()),
+		catchupDisabled:    cfg.Relay().CatchupDisabled,
+		filtrationDisabled: cfg.Relay().DisableFiltration,
+		filterIds:          mp(cfg.Relay().IssuerID),
 	}
 }
 
@@ -148,6 +161,11 @@ func (s *Service) trySave(ctx context.Context, operation rarimocore.Operation) e
 			return errors.Wrap(err, "failed to parse identity default transfer", logan.F{
 				"operation_index": operation.Index,
 			})
+		}
+
+		if _, ok := s.filterIds[op.Id]; !s.filtrationDisabled && !ok {
+			s.log.WithField("operation_index", operation.Index).Info("Issuer ID is not supported")
+			return nil
 		}
 
 		err = s.storage.StateQ().UpsertCtx(ctx, &data.State{

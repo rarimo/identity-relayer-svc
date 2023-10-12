@@ -7,7 +7,9 @@ import (
 )
 
 type RelayConfig struct {
-	CatchupDisabled bool `fig:"catchup_disabled"`
+	CatchupDisabled   bool     `fig:"catchup_disabled"`
+	IssuerID          []string `fig:"issuer_id"`
+	DisableFiltration bool     `fig:"disable_filtration"`
 }
 
 func (c *config) Relay() RelayConfig {
