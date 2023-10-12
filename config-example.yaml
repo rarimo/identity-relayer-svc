@@ -23,3 +23,5 @@ evm:
 
 relay:
   catchup_disabled: true
+  issuer_id: [ '', '' ]
+  disable_filtration: true
