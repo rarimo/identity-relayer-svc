@@ -135,8 +135,8 @@ func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *con
 	}
 
 	tx, err := contract.SignedTransitState(opts, replacedState, replacedGIST, stateInfo, gistRootInfo, details.Proof)
-
 	if err != nil {
+		c.log.Debugf("Failed TX data: %s", hexutil.Encode(tx.Data()))
 		return "", errors.Wrap(err, "failed to send state transition tx")
 	}
 
