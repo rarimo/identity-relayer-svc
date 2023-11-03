@@ -17,8 +17,6 @@ git:
 shell:
   install:
     - apk add git build-base
-    - git config --global url."https://gitlab-ci-token:{{ env "CI_JOB_TOKEN" }}@gitlab.com/".insteadOf https://gitlab.com/
-    - go env -w GOPRIVATE=gitlab.com/*
     - cd /go/src/github.com/rarimo/identity-relayer-svc
     - go mod tidy
     - go mod vendor
@@ -26,7 +24,8 @@ shell:
     - export CGO_ENABLED=1
     - export GO111MODULE=off
     - export GOOS=linux
-    - go build  -o /usr/local/bin/relayer-svc /go/src/github.com/rarimo/identity-relayer-svc
+    - cd /go/src/github.com/rarimo/identity-relayer-svc
+    - go build -o /usr/local/bin/relayer-svc /go/src/github.com/rarimo/identity-relayer-svc
 
 ---
 image: service
