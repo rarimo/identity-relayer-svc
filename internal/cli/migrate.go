@@ -1,10 +1,10 @@
 package cli
 
 import (
+	"github.com/rarimo/identity-relayer-svc/internal/assets"
+	"github.com/rarimo/identity-relayer-svc/internal/config"
 	migrate "github.com/rubenv/sql-migrate"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarimo/relayer-svc/internal/assets"
-	"gitlab.com/rarimo/relayer-svc/internal/config"
 )
 
 var migrations = &migrate.EmbedFileSystemMigrationSource{

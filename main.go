@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"gitlab.com/rarimo/relayer-svc/internal/cli"
+	"github.com/rarimo/identity-relayer-svc/internal/cli"
 )
 
 func main() {

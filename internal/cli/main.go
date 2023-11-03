@@ -3,10 +3,10 @@ package cli
 import (
 	"context"
 
-	"gitlab.com/rarimo/relayer-svc/internal/services"
-	"gitlab.com/rarimo/relayer-svc/internal/services/scheduler"
+	"github.com/rarimo/identity-relayer-svc/internal/services"
+	"github.com/rarimo/identity-relayer-svc/internal/services/ingester"
 
-	"gitlab.com/rarimo/relayer-svc/internal/config"
+	"github.com/rarimo/identity-relayer-svc/internal/config"
 
 	"github.com/alecthomas/kingpin"
 	"gitlab.com/distributed_lab/kit/kv"
@@ -45,7 +45,8 @@ func Run(args []string) bool {
 
 	switch cmd {
 	case runAllCmd.FullCommand():
-		go scheduler.NewService(cfg).Run(ctx)
+		go ingester.NewService(cfg, ingester.NewDefaultIngester(cfg)).Run(ctx)
+		go ingester.NewService(cfg, ingester.NewGistIngester(cfg)).Run(ctx)
 		err = services.NewServer(cfg).Run()
 	case migrateUpCmd.FullCommand():
 		err = MigrateUp(cfg)

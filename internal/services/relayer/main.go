@@ -5,20 +5,20 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/rarimo/identity-relayer-svc/internal/config"
+	"github.com/rarimo/identity-relayer-svc/internal/core"
+	"github.com/rarimo/identity-relayer-svc/internal/data"
+	"github.com/rarimo/identity-relayer-svc/internal/data/pg"
+	"github.com/rarimo/identity-relayer-svc/pkg/polygonid/contracts"
+	rarimocore "github.com/rarimo/rarimo-core/x/rarimocore/types"
 	"gitlab.com/distributed_lab/logan/v3"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
-	"gitlab.com/rarimo/relayer-svc/internal/config"
-	"gitlab.com/rarimo/relayer-svc/internal/core"
-	"gitlab.com/rarimo/relayer-svc/internal/data"
-	"gitlab.com/rarimo/relayer-svc/internal/data/pg"
-	"gitlab.com/rarimo/relayer-svc/pkg/polygonid/contracts"
 )
 
 var (
 	ErrChainNotFound    = errors.New("chain not found")
 	ErrEntryNotFound    = errors.New("entry not found")
-	ErrAlreadySubmitted = errors.New("state already transited")
+	ErrAlreadySubmitted = errors.New("already transited")
 )
 
 type Service struct {
@@ -37,8 +37,8 @@ func NewService(cfg config.Config) *Service {
 	}
 }
 
-func (c *Service) Relays(ctx context.Context, state string) ([]data.Transition, error) {
-	entry, err := c.storage.StateQ().StateByID(state, false)
+func (c *Service) StateRelays(ctx context.Context, state string) ([]data.Transition, error) {
+	entry, err := c.storage.StateQ().StateByIDCtx(ctx, state, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get entry by state")
 	}
@@ -47,7 +47,7 @@ func (c *Service) Relays(ctx context.Context, state string) ([]data.Transition, 
 		return nil, ErrEntryNotFound
 	}
 
-	transitions, err := c.storage.TransitionQ().TransitionsByState(state, false)
+	transitions, err := c.storage.TransitionQ().TransitionsByStateCtx(ctx, state, false)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get transition")
 	}
@@ -55,13 +55,31 @@ func (c *Service) Relays(ctx context.Context, state string) ([]data.Transition, 
 	return transitions, nil
 }
 
-func (c *Service) Relay(ctx context.Context, state string, chainName string) (txhash string, err error) {
+func (c *Service) GistRelays(ctx context.Context, gist string) ([]data.GistTransition, error) {
+	entry, err := c.storage.GistQ().GistByIDCtx(ctx, gist, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get entry by state")
+	}
+
+	if entry == nil {
+		return nil, ErrEntryNotFound
+	}
+
+	transitions, err := c.storage.GistTransitionQ().GistTransitionsByGistCtx(ctx, gist, false)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get transition")
+	}
+
+	return transitions, nil
+}
+
+func (c *Service) StateRelay(ctx context.Context, state string, chainName string) (txhash string, err error) {
 	chain, ok := c.chains.GetChainByName(chainName)
 	if !ok {
 		return "", ErrChainNotFound
 	}
 
-	entry, err := c.storage.StateQ().StateByID(state, false)
+	entry, err := c.storage.StateQ().StateByIDCtx(ctx, state, false)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get entry by state")
 	}
@@ -70,15 +88,56 @@ func (c *Service) Relay(ctx context.Context, state string, chainName string) (tx
 		return "", ErrEntryNotFound
 	}
 
-	if err := c.checkTransitionNotExist(state, chainName); err != nil {
+	if err := c.checkTransitionNotExist(ctx, state, chainName); err != nil {
 		return "", err
 	}
 
 	return c.processIdentityDefaultTransfer(ctx, chain, entry)
 }
 
-func (c *Service) checkTransitionNotExist(state, chain string) error {
-	transitions, err := c.storage.TransitionQ().TransitionsByState(state, false)
+func (c *Service) GistRelay(ctx context.Context, gist string, chainName string) (txhash string, err error) {
+	chain, ok := c.chains.GetChainByName(chainName)
+	if !ok {
+		return "", ErrChainNotFound
+	}
+
+	entry, err := c.storage.GistQ().GistByIDCtx(ctx, gist, false)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get entry by gist")
+	}
+
+	if entry == nil {
+		return "", ErrEntryNotFound
+	}
+
+	if err := c.checkGISTTransitionNotExist(ctx, gist, chainName); err != nil {
+		return "", err
+	}
+
+	return c.processIdentityGISTTransfer(ctx, chain, entry)
+}
+
+func (c *Service) checkTransitionNotExist(ctx context.Context, state, chain string) error {
+	transitions, err := c.storage.TransitionQ().TransitionsByStateCtx(ctx, state, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to get transition")
+	}
+
+	if len(transitions) == 0 {
+		return nil
+	}
+
+	for _, transition := range transitions {
+		if transition.Chain == chain {
+			return ErrAlreadySubmitted
+		}
+	}
+
+	return nil
+}
+
+func (c *Service) checkGISTTransitionNotExist(ctx context.Context, state, chain string) error {
+	transitions, err := c.storage.GistTransitionQ().GistTransitionsByGistCtx(ctx, state, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to get transition")
 	}
@@ -157,33 +216,52 @@ func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *con
 		c.log.WithError(err).Error("failed to create transition entry")
 	}
 
-	// TODO use that code as base if you need to check transaction result
-	//go func() {
-	//	log := c.log.WithField("state", entry.ID).WithField("operation_id", entry.Operation)
-	//
-	//	receipt, err := bind.WaitMined(context.Background(), chain.RPC, tx)
-	//	if err != nil {
-	//		log.WithError(err).Error("failed to wait for state transition tx")
-	//		return
-	//	}
-	//
-	//	if receipt.Status == 0 {
-	//		log.WithError(err).WithFields(logan.F{
-	//			"receipt": utils.Prettify(receipt),
-	//			"chain":   chain.Name,
-	//		}).Error("failed to wait for state transition tx")
-	//		return
-	//	}
-	//
-	//	log.
-	//		WithFields(logan.F{
-	//			"tx_id":        tx.Hash(),
-	//			"tx_index":     receipt.TransactionIndex,
-	//			"block_number": receipt.BlockNumber,
-	//			"gas_used":     receipt.GasUsed,
-	//		}).
-	//		Info("evm transaction confirmed")
-	//}()
+	return tx.Hash().Hex(), nil
+}
+
+func (c *Service) processIdentityGISTTransfer(ctx context.Context, chain *config.EVMChain, entry *data.Gist) (txhash string, err error) {
+	opts := chain.TransactorOpts()
+
+	nonce, err := chain.RPC.PendingNonceAt(context.TODO(), chain.SubmitterAddress)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to fetch a nonce")
+	}
+
+	opts.Nonce = big.NewInt(int64(nonce))
+
+	opts.GasPrice, err = chain.RPC.SuggestGasPrice(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get suggested gas price")
+	}
+
+	details, err := c.core.GetIdentityGISTTransferProof(ctx, entry.Operation)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get operation proof details")
+	}
+
+	contract, err := contracts.NewLightweightStateV2(chain.ContractAddress, chain.RPC)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create contract instance")
+	}
+
+	tx, err := contract.SignedTransitState(opts, nil, nil, contracts.ILightweightStateV2StateData{}, contracts.ILightweightStateV2GistRootData{}, details.Proof)
+	if err != nil {
+		c.log.Debugf(
+			"Tx args: %s",
+			hexutil.Encode(details.Proof),
+		)
+		return "", errors.Wrap(err, "failed to send gist transition tx")
+	}
+
+	transition := data.GistTransition{
+		Tx:    "",
+		Gist:  entry.ID,
+		Chain: chain.Name,
+	}
+
+	if err := c.storage.GistTransitionQ().InsertCtx(ctx, &transition); err != nil {
+		c.log.WithError(err).Error("failed to create transition entry")
+	}
 
 	return tx.Hash().Hex(), nil
 }

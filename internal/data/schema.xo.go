@@ -59,7 +59,23 @@ func (ss StringSlice) Value() (driver.Value, error) {
 		v[i] = `"` + strings.Replace(strings.Replace(s, `\`, `\\\`, -1), `"`, `\"`, -1) + `"`
 	}
 	return "{" + strings.Join(v, ",") + "}", nil
-} // GorpMigration represents a row from 'public.gorp_migrations'.
+} // Gist represents a row from 'public.gists'.
+type Gist struct {
+	ID           string `db:"id"`           // id
+	Operation    string `db:"operation"`    // operation
+	Confirmation string `db:"confirmation"` // confirmation
+
+}
+
+// GistTransition represents a row from 'public.gist_transitions'.
+type GistTransition struct {
+	Tx    string `db:"tx"`    // tx
+	Gist  string `db:"gist"`  // gist
+	Chain string `db:"chain"` // chain
+
+}
+
+// GorpMigration represents a row from 'public.gorp_migrations'.
 type GorpMigration struct {
 	ID        string       `db:"id"`         // id
 	AppliedAt sql.NullTime `db:"applied_at"` // applied_at

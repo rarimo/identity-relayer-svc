@@ -1,31 +1,48 @@
 syntax = "proto3";
 
-option go_package = "gitlab.com/rarimo/relayer-svc/internal/types";
+option go_package = "github.com/rarimo/identity-relayer-svc/internal/types";
 
 import "google/protobuf/any.proto";
 import "google/api/annotations.proto";
 
 service Service {
-  rpc Relay(MsgRelayRequest) returns (MsgRelayResponse){
+  rpc StateRelay(MsgStateRelayRequest) returns (MsgRelayResponse){
     option (google.api.http) = {
-      post: "/integrations/relayer/relay"
+      post: "/integrations/relayer/state/relay"
       body: "body"
     };
   };
 
-  rpc Relays(MsgRelaysRequest) returns (MsgRelaysResponse){
+  rpc GistRelay(MsgGISTRelayRequest) returns (MsgRelayResponse){
     option (google.api.http) = {
-      get: "/integrations/relayer/relay/{state}"
+      post: "/integrations/relayer/gist/relay"
+      body: "body"
+    };
+  };
+
+  rpc StateRelays(MsgRelaysRequest) returns (MsgRelaysResponse){
+    option (google.api.http) = {
+      get: "/integrations/relayer/state/relay/{hash}"
+    };
+  };
+
+  rpc GISTRelays(MsgRelaysRequest) returns (MsgRelaysResponse){
+    option (google.api.http) = {
+      get: "/integrations/relayer/gist/relay/{hash}"
     };
   };
 }
 
-message MsgRelayRequest {
+message MsgStateRelayRequest {
+  RelayBody body = 1;
+}
+
+message MsgGISTRelayRequest {
   RelayBody body = 1;
 }
 
 message RelayBody {
-  string state = 1;
+  string hash = 1;
   string chain = 2;
 }
 
@@ -34,7 +51,7 @@ message MsgRelayResponse {
 }
 
 message MsgRelaysRequest {
-  string state = 1;
+  string hash = 1;
 }
 
 message Transition {

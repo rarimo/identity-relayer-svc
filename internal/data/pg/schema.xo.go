@@ -7,9 +7,9 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/rarimo/identity-relayer-svc/internal/data"
 	"gitlab.com/distributed_lab/kit/pgdb"
 	"gitlab.com/distributed_lab/logan/v3/errors"
-	"gitlab.com/rarimo/relayer-svc/internal/data"
 )
 
 // Storage is the helper struct for database operations
@@ -37,6 +37,188 @@ func (s *Storage) Clone() *Storage {
 // Transaction begins a transaction on repo.
 func (s *Storage) Transaction(tx func() error) error {
 	return s.db.Transaction(tx)
+} // GistQ represents helper struct to access row of 'gists'.
+type GistQ struct {
+	db *pgdb.DB
+}
+
+// NewGistQ  - creates new instance
+func NewGistQ(db *pgdb.DB) *GistQ {
+	return &GistQ{
+		db,
+	}
+}
+
+// GistQ  - creates new instance of GistQ
+func (s Storage) GistQ() *GistQ {
+	return NewGistQ(s.DB())
+}
+
+var colsGist = `id, operation, confirmation`
+
+// InsertCtx inserts a Gist to the database.
+func (q GistQ) InsertCtx(ctx context.Context, g *data.Gist) error {
+	// sql insert query, primary key must be provided
+	sqlstr := `INSERT INTO public.gists (` +
+		`id, operation, confirmation` +
+		`) VALUES (` +
+		`$1, $2, $3` +
+		`)`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, g.ID, g.Operation, g.Confirmation)
+	return errors.Wrap(err, "failed to execute insert query")
+}
+
+// Insert insert a Gist to the database.
+func (q GistQ) Insert(g *data.Gist) error {
+	return q.InsertCtx(context.Background(), g)
+}
+
+// UpdateCtx updates a Gist in the database.
+func (q GistQ) UpdateCtx(ctx context.Context, g *data.Gist) error {
+	// update with composite primary key
+	sqlstr := `UPDATE public.gists SET ` +
+		`operation = $1, confirmation = $2 ` +
+		`WHERE id = $3`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, g.Operation, g.Confirmation, g.ID)
+	return errors.Wrap(err, "failed to execute update")
+}
+
+// Update updates a Gist in the database.
+func (q GistQ) Update(g *data.Gist) error {
+	return q.UpdateCtx(context.Background(), g)
+}
+
+// UpsertCtx performs an upsert for Gist.
+func (q GistQ) UpsertCtx(ctx context.Context, g *data.Gist) error {
+	// upsert
+	sqlstr := `INSERT INTO public.gists (` +
+		`id, operation, confirmation` +
+		`) VALUES (` +
+		`$1, $2, $3` +
+		`)` +
+		` ON CONFLICT (id) DO ` +
+		`UPDATE SET ` +
+		`operation = EXCLUDED.operation, confirmation = EXCLUDED.confirmation `
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, g.ID, g.Operation, g.Confirmation); err != nil {
+		return errors.Wrap(err, "failed to execute upsert stmt")
+	}
+	return nil
+}
+
+// Upsert performs an upsert for Gist.
+func (q GistQ) Upsert(g *data.Gist) error {
+	return q.UpsertCtx(context.Background(), g)
+}
+
+// DeleteCtx deletes the Gist from the database.
+func (q GistQ) DeleteCtx(ctx context.Context, g *data.Gist) error {
+	// delete with single primary key
+	sqlstr := `DELETE FROM public.gists ` +
+		`WHERE id = $1`
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, g.ID); err != nil {
+		return errors.Wrap(err, "failed to exec delete stmt")
+	}
+	return nil
+}
+
+// Delete deletes the Gist from the database.
+func (q GistQ) Delete(g *data.Gist) error {
+	return q.DeleteCtx(context.Background(), g)
+} // GistTransitionQ represents helper struct to access row of 'gist_transitions'.
+type GistTransitionQ struct {
+	db *pgdb.DB
+}
+
+// NewGistTransitionQ  - creates new instance
+func NewGistTransitionQ(db *pgdb.DB) *GistTransitionQ {
+	return &GistTransitionQ{
+		db,
+	}
+}
+
+// GistTransitionQ  - creates new instance of GistTransitionQ
+func (s Storage) GistTransitionQ() *GistTransitionQ {
+	return NewGistTransitionQ(s.DB())
+}
+
+var colsGistTransition = `tx, gist, chain`
+
+// InsertCtx inserts a GistTransition to the database.
+func (q GistTransitionQ) InsertCtx(ctx context.Context, gt *data.GistTransition) error {
+	// sql insert query, primary key must be provided
+	sqlstr := `INSERT INTO public.gist_transitions (` +
+		`tx, gist, chain` +
+		`) VALUES (` +
+		`$1, $2, $3` +
+		`)`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, gt.Tx, gt.Gist, gt.Chain)
+	return errors.Wrap(err, "failed to execute insert query")
+}
+
+// Insert insert a GistTransition to the database.
+func (q GistTransitionQ) Insert(gt *data.GistTransition) error {
+	return q.InsertCtx(context.Background(), gt)
+}
+
+// UpdateCtx updates a GistTransition in the database.
+func (q GistTransitionQ) UpdateCtx(ctx context.Context, gt *data.GistTransition) error {
+	// update with composite primary key
+	sqlstr := `UPDATE public.gist_transitions SET ` +
+		`gist = $1, chain = $2 ` +
+		`WHERE tx = $3`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, gt.Gist, gt.Chain, gt.Tx)
+	return errors.Wrap(err, "failed to execute update")
+}
+
+// Update updates a GistTransition in the database.
+func (q GistTransitionQ) Update(gt *data.GistTransition) error {
+	return q.UpdateCtx(context.Background(), gt)
+}
+
+// UpsertCtx performs an upsert for GistTransition.
+func (q GistTransitionQ) UpsertCtx(ctx context.Context, gt *data.GistTransition) error {
+	// upsert
+	sqlstr := `INSERT INTO public.gist_transitions (` +
+		`tx, gist, chain` +
+		`) VALUES (` +
+		`$1, $2, $3` +
+		`)` +
+		` ON CONFLICT (tx) DO ` +
+		`UPDATE SET ` +
+		`gist = EXCLUDED.gist, chain = EXCLUDED.chain `
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, gt.Tx, gt.Gist, gt.Chain); err != nil {
+		return errors.Wrap(err, "failed to execute upsert stmt")
+	}
+	return nil
+}
+
+// Upsert performs an upsert for GistTransition.
+func (q GistTransitionQ) Upsert(gt *data.GistTransition) error {
+	return q.UpsertCtx(context.Background(), gt)
+}
+
+// DeleteCtx deletes the GistTransition from the database.
+func (q GistTransitionQ) DeleteCtx(ctx context.Context, gt *data.GistTransition) error {
+	// delete with single primary key
+	sqlstr := `DELETE FROM public.gist_transitions ` +
+		`WHERE tx = $1`
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, gt.Tx); err != nil {
+		return errors.Wrap(err, "failed to exec delete stmt")
+	}
+	return nil
+}
+
+// Delete deletes the GistTransition from the database.
+func (q GistTransitionQ) Delete(gt *data.GistTransition) error {
+	return q.DeleteCtx(context.Background(), gt)
 } // GorpMigrationQ represents helper struct to access row of 'gorp_migrations'.
 type GorpMigrationQ struct {
 	db *pgdb.DB
@@ -310,6 +492,134 @@ func (q TransitionQ) DeleteCtx(ctx context.Context, t *data.Transition) error {
 // Delete deletes the Transition from the database.
 func (q TransitionQ) Delete(t *data.Transition) error {
 	return q.DeleteCtx(context.Background(), t)
+}
+
+// GistByOperationCtx retrieves a row from 'public.gists' as a Gist.
+//
+// Generated from index 'gists_operation_key'.
+func (q GistQ) GistByOperationCtx(ctx context.Context, operation string, isForUpdate bool) (*data.Gist, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`id, operation, confirmation ` +
+		`FROM public.gists ` +
+		`WHERE operation = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.Gist
+	err := q.db.GetRawContext(ctx, &res, sqlstr, operation)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// GistByOperation retrieves a row from 'public.gists' as a Gist.
+//
+// Generated from index 'gists_operation_key'.
+func (q GistQ) GistByOperation(operation string, isForUpdate bool) (*data.Gist, error) {
+	return q.GistByOperationCtx(context.Background(), operation, isForUpdate)
+}
+
+// GistByIDCtx retrieves a row from 'public.gists' as a Gist.
+//
+// Generated from index 'gists_pkey'.
+func (q GistQ) GistByIDCtx(ctx context.Context, id string, isForUpdate bool) (*data.Gist, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`id, operation, confirmation ` +
+		`FROM public.gists ` +
+		`WHERE id = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.Gist
+	err := q.db.GetRawContext(ctx, &res, sqlstr, id)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// GistByID retrieves a row from 'public.gists' as a Gist.
+//
+// Generated from index 'gists_pkey'.
+func (q GistQ) GistByID(id string, isForUpdate bool) (*data.Gist, error) {
+	return q.GistByIDCtx(context.Background(), id, isForUpdate)
+}
+
+// GistTransitionsByGistCtx retrieves a row from 'public.gist_transitions' as a GistTransition.
+//
+// Generated from index 'gist_transitions_index'.
+func (q GistTransitionQ) GistTransitionsByGistCtx(ctx context.Context, gist string, isForUpdate bool) ([]data.GistTransition, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`tx, gist, chain ` +
+		`FROM public.gist_transitions ` +
+		`WHERE gist = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res []data.GistTransition
+	err := q.db.SelectRawContext(ctx, &res, sqlstr, gist)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return res, nil
+}
+
+// GistTransitionsByGist retrieves a row from 'public.gist_transitions' as a GistTransition.
+//
+// Generated from index 'gist_transitions_index'.
+func (q GistTransitionQ) GistTransitionsByGist(gist string, isForUpdate bool) ([]data.GistTransition, error) {
+	return q.GistTransitionsByGistCtx(context.Background(), gist, isForUpdate)
+}
+
+// GistTransitionByTxCtx retrieves a row from 'public.gist_transitions' as a GistTransition.
+//
+// Generated from index 'gist_transitions_pkey'.
+func (q GistTransitionQ) GistTransitionByTxCtx(ctx context.Context, tx string, isForUpdate bool) (*data.GistTransition, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`tx, gist, chain ` +
+		`FROM public.gist_transitions ` +
+		`WHERE tx = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.GistTransition
+	err := q.db.GetRawContext(ctx, &res, sqlstr, tx)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// GistTransitionByTx retrieves a row from 'public.gist_transitions' as a GistTransition.
+//
+// Generated from index 'gist_transitions_pkey'.
+func (q GistTransitionQ) GistTransitionByTx(tx string, isForUpdate bool) (*data.GistTransition, error) {
+	return q.GistTransitionByTxCtx(context.Background(), tx, isForUpdate)
 }
 
 // GorpMigrationByIDCtx retrieves a row from 'public.gorp_migrations' as a GorpMigration.

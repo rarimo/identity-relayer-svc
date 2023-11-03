@@ -7,9 +7,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
-	merkle "gitlab.com/rarimo/go-merkle"
-	"gitlab.com/rarimo/rarimo-core/x/rarimocore/crypto/pkg"
-	rarimocore "gitlab.com/rarimo/rarimo-core/x/rarimocore/types"
+	merkle "github.com/rarimo/go-merkle"
+	"github.com/rarimo/rarimo-core/x/rarimocore/crypto/pkg"
+	rarimocore "github.com/rarimo/rarimo-core/x/rarimocore/types"
 )
 
 func TestName(t *testing.T) {

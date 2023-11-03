@@ -22,8 +22,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ServiceClient interface {
-	Relay(ctx context.Context, in *MsgRelayRequest, opts ...grpc.CallOption) (*MsgRelayResponse, error)
-	Relays(ctx context.Context, in *MsgRelaysRequest, opts ...grpc.CallOption) (*MsgRelaysResponse, error)
+	StateRelay(ctx context.Context, in *MsgStateRelayRequest, opts ...grpc.CallOption) (*MsgRelayResponse, error)
+	GistRelay(ctx context.Context, in *MsgGISTRelayRequest, opts ...grpc.CallOption) (*MsgRelayResponse, error)
+	StateRelays(ctx context.Context, in *MsgRelaysRequest, opts ...grpc.CallOption) (*MsgRelaysResponse, error)
+	GISTRelays(ctx context.Context, in *MsgRelaysRequest, opts ...grpc.CallOption) (*MsgRelaysResponse, error)
 }
 
 type serviceClient struct {
@@ -34,18 +36,36 @@ func NewServiceClient(cc grpc.ClientConnInterface) ServiceClient {
 	return &serviceClient{cc}
 }
 
-func (c *serviceClient) Relay(ctx context.Context, in *MsgRelayRequest, opts ...grpc.CallOption) (*MsgRelayResponse, error) {
+func (c *serviceClient) StateRelay(ctx context.Context, in *MsgStateRelayRequest, opts ...grpc.CallOption) (*MsgRelayResponse, error) {
 	out := new(MsgRelayResponse)
-	err := c.cc.Invoke(ctx, "/Service/Relay", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/Service/StateRelay", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *serviceClient) Relays(ctx context.Context, in *MsgRelaysRequest, opts ...grpc.CallOption) (*MsgRelaysResponse, error) {
+func (c *serviceClient) GistRelay(ctx context.Context, in *MsgGISTRelayRequest, opts ...grpc.CallOption) (*MsgRelayResponse, error) {
+	out := new(MsgRelayResponse)
+	err := c.cc.Invoke(ctx, "/Service/GistRelay", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *serviceClient) StateRelays(ctx context.Context, in *MsgRelaysRequest, opts ...grpc.CallOption) (*MsgRelaysResponse, error) {
 	out := new(MsgRelaysResponse)
-	err := c.cc.Invoke(ctx, "/Service/Relays", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/Service/StateRelays", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *serviceClient) GISTRelays(ctx context.Context, in *MsgRelaysRequest, opts ...grpc.CallOption) (*MsgRelaysResponse, error) {
+	out := new(MsgRelaysResponse)
+	err := c.cc.Invoke(ctx, "/Service/GISTRelays", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -56,19 +76,27 @@ func (c *serviceClient) Relays(ctx context.Context, in *MsgRelaysRequest, opts .
 // All implementations should embed UnimplementedServiceServer
 // for forward compatibility
 type ServiceServer interface {
-	Relay(context.Context, *MsgRelayRequest) (*MsgRelayResponse, error)
-	Relays(context.Context, *MsgRelaysRequest) (*MsgRelaysResponse, error)
+	StateRelay(context.Context, *MsgStateRelayRequest) (*MsgRelayResponse, error)
+	GistRelay(context.Context, *MsgGISTRelayRequest) (*MsgRelayResponse, error)
+	StateRelays(context.Context, *MsgRelaysRequest) (*MsgRelaysResponse, error)
+	GISTRelays(context.Context, *MsgRelaysRequest) (*MsgRelaysResponse, error)
 }
 
 // UnimplementedServiceServer should be embedded to have forward compatible implementations.
 type UnimplementedServiceServer struct {
 }
 
-func (UnimplementedServiceServer) Relay(context.Context, *MsgRelayRequest) (*MsgRelayResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Relay not implemented")
+func (UnimplementedServiceServer) StateRelay(context.Context, *MsgStateRelayRequest) (*MsgRelayResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StateRelay not implemented")
 }
-func (UnimplementedServiceServer) Relays(context.Context, *MsgRelaysRequest) (*MsgRelaysResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Relays not implemented")
+func (UnimplementedServiceServer) GistRelay(context.Context, *MsgGISTRelayRequest) (*MsgRelayResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GistRelay not implemented")
+}
+func (UnimplementedServiceServer) StateRelays(context.Context, *MsgRelaysRequest) (*MsgRelaysResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StateRelays not implemented")
+}
+func (UnimplementedServiceServer) GISTRelays(context.Context, *MsgRelaysRequest) (*MsgRelaysResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GISTRelays not implemented")
 }
 
 // UnsafeServiceServer may be embedded to opt out of forward compatibility for this service.
@@ -82,38 +110,74 @@ func RegisterServiceServer(s grpc.ServiceRegistrar, srv ServiceServer) {
 	s.RegisterService(&Service_ServiceDesc, srv)
 }
 
-func _Service_Relay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(MsgRelayRequest)
+func _Service_StateRelay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgStateRelayRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServiceServer).Relay(ctx, in)
+		return srv.(ServiceServer).StateRelay(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Service/Relay",
+		FullMethod: "/Service/StateRelay",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServiceServer).Relay(ctx, req.(*MsgRelayRequest))
+		return srv.(ServiceServer).StateRelay(ctx, req.(*MsgStateRelayRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Service_Relays_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Service_GistRelay_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgGISTRelayRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServiceServer).GistRelay(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Service/GistRelay",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServiceServer).GistRelay(ctx, req.(*MsgGISTRelayRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Service_StateRelays_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(MsgRelaysRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServiceServer).Relays(ctx, in)
+		return srv.(ServiceServer).StateRelays(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/Service/Relays",
+		FullMethod: "/Service/StateRelays",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServiceServer).Relays(ctx, req.(*MsgRelaysRequest))
+		return srv.(ServiceServer).StateRelays(ctx, req.(*MsgRelaysRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Service_GISTRelays_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MsgRelaysRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServiceServer).GISTRelays(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/Service/GISTRelays",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServiceServer).GISTRelays(ctx, req.(*MsgRelaysRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -126,12 +190,20 @@ var Service_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Relay",
-			Handler:    _Service_Relay_Handler,
+			MethodName: "StateRelay",
+			Handler:    _Service_StateRelay_Handler,
 		},
 		{
-			MethodName: "Relays",
-			Handler:    _Service_Relays_Handler,
+			MethodName: "GistRelay",
+			Handler:    _Service_GistRelay_Handler,
+		},
+		{
+			MethodName: "StateRelays",
+			Handler:    _Service_StateRelays_Handler,
+		},
+		{
+			MethodName: "GISTRelays",
+			Handler:    _Service_GISTRelays_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -16,9 +16,9 @@
     "application/json"
   ],
   "paths": {
-    "/integrations/relayer/relay": {
+    "/integrations/relayer/gist/relay": {
       "post": {
-        "operationId": "Service_Relay",
+        "operationId": "Service_GistRelay",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -48,9 +48,9 @@
         ]
       }
     },
-    "/integrations/relayer/relay/{state}": {
+    "/integrations/relayer/gist/relay/{hash}": {
       "get": {
-        "operationId": "Service_Relays",
+        "operationId": "Service_GISTRelays",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -67,7 +67,69 @@
         },
         "parameters": [
           {
-            "name": "state",
+            "name": "hash",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Service"
+        ]
+      }
+    },
+    "/integrations/relayer/state/relay": {
+      "post": {
+        "operationId": "Service_StateRelay",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/MsgRelayResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/RelayBody"
+            }
+          }
+        ],
+        "tags": [
+          "Service"
+        ]
+      }
+    },
+    "/integrations/relayer/state/relay/{hash}": {
+      "get": {
+        "operationId": "Service_StateRelays",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/MsgRelaysResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "hash",
             "in": "path",
             "required": true,
             "type": "string"
@@ -103,7 +165,7 @@
     "RelayBody": {
       "type": "object",
       "properties": {
-        "state": {
+        "hash": {
           "type": "string"
         },
         "chain": {
