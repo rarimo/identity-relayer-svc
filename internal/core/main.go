@@ -60,7 +60,7 @@ func (c *Core) GetIdentityStateTransferProof(ctx context.Context, operationID st
 		return nil, errors.Wrap(err, "failed to get the operation")
 	}
 
-	transfer, err := pkg.GetIdentityDefaultTransfer(operation.Operation)
+	transfer, err := pkg.GetIdentityStateTransfer(operation.Operation)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse operation details")
 	}
