@@ -5,10 +5,9 @@
 The Relayer service as a part of Rarimo cross-chain system designed to finalize transferring flow by submitting final
 transaction to the target chain.
 
-With the identity Relayer you will be able to fetch information from Rarimo chain about new signatures for
-`IDENTITY_DEFAULT_TRANSFER` and `IDENTITY_GIST_TRANSFER` operations. When the signature has been provided, relayer will
-create the EVM transaction to the configured smart contract with given signature, merkle path and state/gist
-information.
+The goal of identity relayer is to observe and fetch information about new signatures for
+`IDENTITY_STATE_TRANSFER` and `IDENTITY_GIST_TRANSFER` operations and after submit the state transit transactions to
+configured EVM chain by request.
 
 For more information about how the PolygonID identity transfer works
 visit: [rarimo-core docs](https://rarimo.github.io/rarimo-core/docs/common/bridging/002-identity.html).
@@ -20,6 +19,7 @@ visit: [rarimo-core docs](https://rarimo.github.io/rarimo-core/docs/common/bridg
 You can use the image from GitHub registry or build the executable by yourself.
 
 Build command:
+
 ```
 go build .
 ```
@@ -52,7 +52,7 @@ listener:
 # PostgreSQL DB connect
 db:
   url: "postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable"
-  
+
 # Rarimo core RPCs
 core:
   addr: tcp://validator:26657
@@ -84,6 +84,7 @@ relay:
 Use the `relayer-svc migrate up && relayer-svc run all` command to perform database migrations and run the service.
 
 Explore the simple docker-compose file to run described services:
+
 ```yaml
 version: "3.7"
 
@@ -120,7 +121,9 @@ volumes:
 ----
 
 ## Using service
+
 1. Execute the POST `/integrations/relayer/state/relay` request with the following body to perform state publishing:
+
 ```json
 {
   "chain": "The name of chain submit to according to the service configuration",
@@ -129,6 +132,7 @@ volumes:
 ```
 
 2. Execute the POST `/integrations/relayer/gist/relay` request with the following body to perform gist publishing:
+
 ```json
 {
   "chain": "The name of chain submit to according to the service configuration",
@@ -137,6 +141,7 @@ volumes:
 ```
 
 The response will be:
+
 * Code 200, successful relay, tx hash in body.
 * Code 404, state is not transferred yet, wait a little and repeat request.
 * Code 400, state has be relayed before.
