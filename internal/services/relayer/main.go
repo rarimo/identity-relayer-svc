@@ -92,7 +92,7 @@ func (c *Service) StateRelay(ctx context.Context, state string, chainName string
 		return "", err
 	}
 
-	return c.processIdentityDefaultTransfer(ctx, chain, entry)
+	return c.processIdentityStateTransfer(ctx, chain, entry)
 }
 
 func (c *Service) GistRelay(ctx context.Context, gist string, chainName string) (txhash string, err error) {
@@ -155,7 +155,7 @@ func (c *Service) checkGISTTransitionNotExist(ctx context.Context, state, chain 
 	return nil
 }
 
-func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *config.EVMChain, entry *data.State) (txhash string, err error) {
+func (c *Service) processIdentityStateTransfer(ctx context.Context, chain *config.EVMChain, entry *data.State) (txhash string, err error) {
 	opts := chain.TransactorOpts()
 
 	nonce, err := chain.RPC.PendingNonceAt(context.TODO(), chain.SubmitterAddress)
@@ -170,22 +170,16 @@ func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *con
 		return "", errors.Wrap(err, "failed to get suggested gas price")
 	}
 
-	details, err := c.core.GetIdentityDefaultTransferProof(ctx, entry.Operation)
+	details, err := c.core.GetIdentityStateTransferProof(ctx, entry.Operation)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get operation proof details")
 	}
 
 	replacedState := new(big.Int).SetBytes(hexutil.MustDecode(details.Operation.ReplacedStateHash))
-	replacedGIST := new(big.Int).SetBytes(hexutil.MustDecode(details.Operation.ReplacedGISTHash))
 
 	stateInfo, err := getStateInfo(details.Operation)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get state info from transfer")
-	}
-
-	gistRootInfo, err := getGistRootInfo(details.Operation)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get gist root info from transfer")
 	}
 
 	contract, err := contracts.NewLightweightStateV2(chain.ContractAddress, chain.RPC)
@@ -193,14 +187,10 @@ func (c *Service) processIdentityDefaultTransfer(ctx context.Context, chain *con
 		return "", errors.Wrap(err, "failed to create contract instance")
 	}
 
-	tx, err := contract.SignedTransitState(opts, replacedState, replacedGIST, stateInfo, gistRootInfo, details.Proof)
+	tx, err := contract.SignedTransitState(opts, replacedState, nil, stateInfo, contracts.ILightweightStateV2GistRootData{}, details.Proof)
 	if err != nil {
 		c.log.Debugf(
-			"Tx args: %s %s %v %v %s",
-			replacedState.String(),
-			replacedGIST.String(),
-			stateInfo,
-			gistRootInfo,
+			"Tx args: %s",
 			hexutil.Encode(details.Proof),
 		)
 		return "", errors.Wrap(err, "failed to send state transition tx")
@@ -239,12 +229,17 @@ func (c *Service) processIdentityGISTTransfer(ctx context.Context, chain *config
 		return "", errors.Wrap(err, "failed to get operation proof details")
 	}
 
+	gistInfo, err := getGistRootInfo(details.Operation)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get gist info from transfer")
+	}
+
 	contract, err := contracts.NewLightweightStateV2(chain.ContractAddress, chain.RPC)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to create contract instance")
 	}
 
-	tx, err := contract.SignedTransitState(opts, nil, nil, contracts.ILightweightStateV2StateData{}, contracts.ILightweightStateV2GistRootData{}, details.Proof)
+	tx, err := contract.SignedTransitState(opts, nil, nil, contracts.ILightweightStateV2StateData{}, gistInfo, details.Proof)
 	if err != nil {
 		c.log.Debugf(
 			"Tx args: %s",
@@ -266,12 +261,10 @@ func (c *Service) processIdentityGISTTransfer(ctx context.Context, chain *config
 	return tx.Hash().Hex(), nil
 }
 
-func getStateInfo(transfer *rarimocore.IdentityDefaultTransfer) (state contracts.ILightweightStateV2StateData, err error) {
+func getStateInfo(transfer *rarimocore.IdentityStateTransfer) (state contracts.ILightweightStateV2StateData, err error) {
 	state.Id = new(big.Int).SetBytes(hexutil.MustDecode(transfer.Id))
 
 	state.State = new(big.Int).SetBytes(hexutil.MustDecode(transfer.StateHash))
-
-	state.ReplacedByState = new(big.Int).SetBytes(hexutil.MustDecode(transfer.StateReplacedBy))
 
 	var ok bool
 	state.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.StateCreatedAtTimestamp, 10)
@@ -287,10 +280,8 @@ func getStateInfo(transfer *rarimocore.IdentityDefaultTransfer) (state contracts
 	return
 }
 
-func getGistRootInfo(transfer *rarimocore.IdentityDefaultTransfer) (gistRoot contracts.ILightweightStateV2GistRootData, err error) {
+func getGistRootInfo(transfer *rarimocore.IdentityGISTTransfer) (gistRoot contracts.ILightweightStateV2GistRootData, err error) {
 	gistRoot.Root = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTHash))
-
-	gistRoot.ReplacedByRoot = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTReplacedBy))
 
 	var ok bool
 	gistRoot.CreatedAtTimestamp, ok = big.NewInt(0).SetString(transfer.GISTCreatedAtTimestamp, 10)

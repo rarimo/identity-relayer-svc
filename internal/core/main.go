@@ -41,7 +41,7 @@ func NewCore(cfg config.Config) *Core {
 	}
 }
 
-func (c *Core) GetIdentityDefaultTransferProof(ctx context.Context, operationID string) (*IdentityTransferDetails, error) {
+func (c *Core) GetIdentityStateTransferProof(ctx context.Context, operationID string) (*IdentityStateTransferDetails, error) {
 	proof, err := c.core.OperationProof(ctx, &rarimocore.QueryGetOperationProofRequest{Index: operationID})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get the operation proof")
@@ -65,7 +65,7 @@ func (c *Core) GetIdentityDefaultTransferProof(ctx context.Context, operationID 
 		return nil, errors.Wrap(err, "failed to parse operation details")
 	}
 
-	result := IdentityTransferDetails{Operation: transfer}
+	result := IdentityStateTransferDetails{Operation: transfer}
 
 	result.Proof, err = proofArgs.Pack(pathHashes, signature)
 	if err != nil {

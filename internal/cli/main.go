@@ -45,7 +45,7 @@ func Run(args []string) bool {
 
 	switch cmd {
 	case runAllCmd.FullCommand():
-		go ingester.NewService(cfg, ingester.NewDefaultIngester(cfg)).Run(ctx)
+		go ingester.NewService(cfg, ingester.NewStateIngester(cfg)).Run(ctx)
 		go ingester.NewService(cfg, ingester.NewGistIngester(cfg)).Run(ctx)
 		err = services.NewServer(cfg).Run()
 	case migrateUpCmd.FullCommand():

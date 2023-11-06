@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	defaultQuery = "tm.event='Tx' AND operation_signed.operation_type='IDENTITY_DEFAULT_TRANSFER'"
-	gistQuery    = "tm.event='Tx' AND operation_signed.operation_type='IDENTITY_GIST_TRANSFER'"
+	stateQuery = "tm.event='Tx' AND operation_signed.operation_type='IDENTITY_STATE_TRANSFER'"
+	gistQuery  = "tm.event='Tx' AND operation_signed.operation_type='IDENTITY_GIST_TRANSFER'"
 )
 
 type Service struct {

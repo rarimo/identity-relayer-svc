@@ -2,8 +2,8 @@ package core
 
 import rarimocore "github.com/rarimo/rarimo-core/x/rarimocore/types"
 
-type IdentityTransferDetails struct {
-	Operation *rarimocore.IdentityDefaultTransfer
+type IdentityStateTransferDetails struct {
+	Operation *rarimocore.IdentityStateTransfer
 	Proof     []byte
 }
 

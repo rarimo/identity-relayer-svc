@@ -13,16 +13,16 @@ import (
 	"gitlab.com/distributed_lab/logan/v3/errors"
 )
 
-type defaultIngester struct {
+type stateIngester struct {
 	log        *logan.Entry
 	rarimocore rarimocore.QueryClient
 	storage    *pg.Storage
 	filter     func(string) bool
 }
 
-var _ Processor = &defaultIngester{}
+var _ Processor = &stateIngester{}
 
-func NewDefaultIngester(cfg config.Config) Processor {
+func NewStateIngester(cfg config.Config) Processor {
 	catchupDisabled := cfg.Relay().CatchupDisabled
 	allowList := mp(cfg.Relay().IssuerID)
 
@@ -34,7 +34,7 @@ func NewDefaultIngester(cfg config.Config) Processor {
 		return ok
 	}
 
-	return &defaultIngester{
+	return &stateIngester{
 		log:        cfg.Log(),
 		rarimocore: rarimocore.NewQueryClient(cfg.Cosmos()),
 		storage:    pg.New(cfg.DB()),
@@ -42,15 +42,15 @@ func NewDefaultIngester(cfg config.Config) Processor {
 	}
 }
 
-func (s *defaultIngester) query() string {
-	return defaultQuery
+func (s *stateIngester) query() string {
+	return stateQuery
 }
 
-func (s *defaultIngester) name() string {
-	return "identity-default-ingester"
+func (s *stateIngester) name() string {
+	return "identity-state-ingester"
 }
 
-func (s *defaultIngester) catchup(ctx context.Context) error {
+func (s *stateIngester) catchup(ctx context.Context) error {
 	s.log.Info("Starting catchup")
 	defer s.log.Info("Catchup finished")
 
@@ -77,7 +77,7 @@ func (s *defaultIngester) catchup(ctx context.Context) error {
 	}
 }
 
-func (s *defaultIngester) process(
+func (s *stateIngester) process(
 	ctx context.Context,
 	confirmationID string,
 ) error {
@@ -108,11 +108,11 @@ func (s *defaultIngester) process(
 
 }
 
-func (s *defaultIngester) trySave(ctx context.Context, operation rarimocore.Operation) error {
-	if operation.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
+func (s *stateIngester) trySave(ctx context.Context, operation rarimocore.Operation) error {
+	if operation.OperationType == rarimocore.OpType_IDENTITY_STATE_TRANSFER {
 		s.log.WithField("operation_index", operation.Index).Info("Trying to save op")
 
-		op, err := pkg.GetIdentityDefaultTransfer(operation)
+		op, err := pkg.GetIdentityStateTransfer(operation)
 		if err != nil {
 			return errors.Wrap(err, "failed to parse identity default transfer", logan.F{
 				"operation_index": operation.Index,
