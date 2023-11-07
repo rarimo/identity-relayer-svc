@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/cosmos/cosmos-sdk v0.46.12
 	github.com/ethereum/go-ethereum v1.10.26
-	github.com/rarimo/rarimo-core v1.0.8-0.20231107183134-c8a62c0c9ebd
+	github.com/rarimo/rarimo-core v1.0.8-0.20231107191012-470dd204b863
 	github.com/spf13/cast v1.5.1
 	github.com/stretchr/testify v1.8.3 // indirect
 	github.com/tendermint/tendermint v0.34.27
