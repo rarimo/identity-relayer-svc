@@ -23,11 +23,11 @@ type stateIngester struct {
 var _ Processor = &stateIngester{}
 
 func NewStateIngester(cfg config.Config) Processor {
-	catchupDisabled := cfg.Relay().CatchupDisabled
+	filtrationDisabled := cfg.Relay().DisableFiltration
 	allowList := mp(cfg.Relay().IssuerID)
 
 	filter := func(id string) bool {
-		if catchupDisabled {
+		if filtrationDisabled {
 			return true
 		}
 		_, ok := allowList[id]

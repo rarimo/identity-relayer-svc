@@ -6,7 +6,7 @@ require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
 	github.com/cosmos/cosmos-sdk v0.46.12
 	github.com/ethereum/go-ethereum v1.10.26
-	github.com/rarimo/rarimo-core v1.0.8-0.20231106115134-c18298469fe6
+	github.com/rarimo/rarimo-core v1.0.8-0.20231107183134-c8a62c0c9ebd
 	github.com/spf13/cast v1.5.1
 	github.com/stretchr/testify v1.8.3 // indirect
 	github.com/tendermint/tendermint v0.34.27
@@ -15,15 +15,15 @@ require (
 	gitlab.com/distributed_lab/logan v3.8.1+incompatible
 	gitlab.com/distributed_lab/running v0.0.0-20200706131153-4af0e83eb96c
 	golang.org/x/exp v0.0.0-20230206171751-46f607a40771 // indirect
-	google.golang.org/grpc v1.58.0
+	google.golang.org/grpc v1.59.0
 )
 
 require (
 	github.com/ava-labs/subnet-evm v0.2.4
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.1
 	github.com/rarimo/go-merkle v0.0.0-20231004122345-36fa49031c66
 	github.com/rubenv/sql-migrate v1.5.2
-	google.golang.org/genproto/googleapis/api v0.0.0-20230822172742-b8732ec3820d
+	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17
 	google.golang.org/protobuf v1.31.0
 )
 
@@ -70,11 +70,11 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/godbus/dbus v0.0.0-20190726142602-4481cbc300e2 // indirect
 	github.com/gogo/protobuf v1.3.3 // indirect
-	github.com/golang/glog v1.1.0 // indirect
+	github.com/golang/glog v1.1.2 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.5-0.20220116011046-fa5810519dcb // indirect
 	github.com/google/btree v1.1.2 // indirect
-	github.com/google/uuid v1.3.0 // indirect
+	github.com/google/uuid v1.3.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
@@ -131,13 +131,13 @@ require (
 	github.com/zondax/ledger-go v0.14.1 // indirect
 	gitlab.com/distributed_lab/figure v2.1.0+incompatible // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
-	golang.org/x/crypto v0.13.0 // indirect
-	golang.org/x/net v0.15.0 // indirect
-	golang.org/x/sys v0.12.0 // indirect
-	golang.org/x/term v0.12.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
-	google.golang.org/genproto v0.0.0-20230803162519-f966b187b2e5 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230822172742-b8732ec3820d // indirect
+	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/term v0.13.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
+	google.golang.org/genproto v0.0.0-20231030173426-d783a09b4405 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20231030173426-d783a09b4405 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
