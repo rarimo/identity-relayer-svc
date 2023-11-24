@@ -1,0 +1,64 @@
+syntax = "proto3";
+
+option go_package = "github.com/rarimo/identity-relayer-svc/internal/types";
+
+import "google/protobuf/any.proto";
+import "google/api/annotations.proto";
+
+service Service {
+  rpc StateRelay(MsgStateRelayRequest) returns (MsgRelayResponse){
+    option (google.api.http) = {
+      post: "/integrations/relayer/state/relay"
+      body: "body"
+    };
+  };
+
+  rpc GistRelay(MsgGISTRelayRequest) returns (MsgRelayResponse){
+    option (google.api.http) = {
+      post: "/integrations/relayer/gist/relay"
+      body: "body"
+    };
+  };
+
+  rpc StateRelays(MsgRelaysRequest) returns (MsgRelaysResponse){
+    option (google.api.http) = {
+      get: "/integrations/relayer/state/relay/{hash}"
+    };
+  };
+
+  rpc GISTRelays(MsgRelaysRequest) returns (MsgRelaysResponse){
+    option (google.api.http) = {
+      get: "/integrations/relayer/gist/relay/{hash}"
+    };
+  };
+}
+
+message MsgStateRelayRequest {
+  RelayBody body = 1;
+}
+
+message MsgGISTRelayRequest {
+  RelayBody body = 1;
+}
+
+message RelayBody {
+  string hash = 1;
+  string chain = 2;
+}
+
+message MsgRelayResponse {
+  string tx = 1;
+}
+
+message MsgRelaysRequest {
+  string hash = 1;
+}
+
+message Transition {
+  string chain = 1;
+  string tx = 2;
+}
+
+message MsgRelaysResponse {
+  repeated Transition relays = 1;
+}

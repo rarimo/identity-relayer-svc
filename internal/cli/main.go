@@ -2,24 +2,18 @@ package cli
 
 import (
 	"context"
-	"os"
-	"os/signal"
-	"sync"
-	"syscall"
 
-	"gitlab.com/rarimo/relayer-svc/internal/services"
+	"github.com/rarimo/identity-relayer-svc/internal/services"
+	"github.com/rarimo/identity-relayer-svc/internal/services/ingester"
 
-	"gitlab.com/rarimo/relayer-svc/internal/services/relayer"
-
-	"gitlab.com/rarimo/relayer-svc/internal/config"
+	"github.com/rarimo/identity-relayer-svc/internal/config"
 
 	"github.com/alecthomas/kingpin"
 	"gitlab.com/distributed_lab/kit/kv"
-	"gitlab.com/distributed_lab/logan/v2/errors"
 	"gitlab.com/distributed_lab/logan/v3"
 )
 
-func Run(args []string) {
+func Run(args []string) bool {
 	defer func() {
 		if rvr := recover(); rvr != nil {
 			logan.New().WithRecover(rvr).Fatal("app panicked")
@@ -28,32 +22,21 @@ func Run(args []string) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
 	cfg := config.New(kv.MustFromEnv())
 	log := cfg.Log()
 
 	log.Info("Running service")
 
-	var wg sync.WaitGroup
-	run := func(f func(config.Config, context.Context)) {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			defer func() {
-				if rvr := recover(); rvr != nil {
-					err := errors.FromPanic(rvr)
-					logan.New().WithError(err).Fatal("one of the services panicked")
-				}
-			}()
-			f(cfg, ctx)
-		}()
-	}
-
 	app := kingpin.New("relayer-svc", "")
 
 	runCmd := app.Command("run", "run command")
 	runAllCmd := runCmd.Command("all", "run all services")
-	runRelayerCmd := runCmd.Command("relayer", "run relayer routines only")
-	runSchedulerCmd := runCmd.Command("scheduler", "run scheduler only")
+
+	// Running migrations
+	migrateCmd := app.Command("migrate", "migrate command")
+	migrateUpCmd := migrateCmd.Command("up", "migrate db up")
+	migrateDownCmd := migrateCmd.Command("down", "migrate db down")
 
 	cmd, err := app.Parse(args[1:])
 	if err != nil {
@@ -62,42 +45,21 @@ func Run(args []string) {
 
 	switch cmd {
 	case runAllCmd.FullCommand():
-		log.Info("starting all services")
-		run(services.RunInstaScheduler)
-		run(services.RunScheduler)
-		run(relayer.Run)
-		run(services.RunQueueCleaner)
-	case runSchedulerCmd.FullCommand():
-		log.Info("starting scheduler")
-		run(services.RunInstaScheduler)
-		run(services.RunScheduler)
-	case runRelayerCmd.FullCommand():
-		log.Info("starting all services")
-		run(relayer.Run)
-		run(services.RunQueueCleaner)
+		go ingester.NewService(cfg, ingester.NewStateIngester(cfg)).Run(ctx)
+		go ingester.NewService(cfg, ingester.NewGistIngester(cfg)).Run(ctx)
+		err = services.NewServer(cfg).Run()
+	case migrateUpCmd.FullCommand():
+		err = MigrateUp(cfg)
+	case migrateDownCmd.FullCommand():
+		err = MigrateDown(cfg)
 	default:
 		log.Fatal("unknown command %s", cmd)
 	}
 
-	var gracefulStop = make(chan os.Signal, 1)
-	signal.Notify(gracefulStop, syscall.SIGTERM)
-	signal.Notify(gracefulStop, syscall.SIGINT)
-
-	// making WaitGroup usable in select
-	wgch := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(wgch)
-	}()
-
-	select {
-	// listening for runners stop
-	case <-wgch:
-		cfg.Log().Warn("all services stopped")
-	// listening for OS signals
-	case <-gracefulStop:
-		cfg.Log().Info("received signal to stop")
-		cancel()
-		<-wgch
+	if err != nil {
+		log.WithError(err).Error("failed to exec cmd")
+		return false
 	}
+
+	return true
 }
