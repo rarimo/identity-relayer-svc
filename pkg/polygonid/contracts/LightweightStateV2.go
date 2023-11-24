@@ -69,7 +69,7 @@ type IStateStateInfo struct {
 
 // LightweightStateV2MetaData contains all meta data concerning the LightweightStateV2 contract.
 var LightweightStateV2MetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newGistRoot\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"identityId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdentityState\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"prevIdentityState\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"prevGistRoot\",\"type\":\"uint256\"}],\"name\":\"SignedStateTransited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"P\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"signer_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"sourceStateContract_\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"chainName_\",\"type\":\"string\"}],\"name\":\"__LightweightStateV2_init\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"signer_\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"chainName_\",\"type\":\"string\"}],\"name\":\"__Signers_init\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"chainName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"newSignerPubKey_\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"changeSigner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newSourceStateContract_\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"changeSourceStateContract\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"methodId_\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"contractAddress_\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"signHash_\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"checkSignatureAndIncrementNonce\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentGISTRootInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"root\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIState.GistRootInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGISTRoot\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"root_\",\"type\":\"uint256\"}],\"name\":\"getGISTRootInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"root\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIState.GistRootInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"}],\"name\":\"getIdentityLastState\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"methodId_\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"contractAddress_\",\"type\":\"address\"}],\"name\":\"getSigComponents\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"chainName_\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"nonce_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"}],\"name\":\"getStateInfoById\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByState\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIState.StateInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state_\",\"type\":\"uint256\"}],\"name\":\"getStateInfoByIdAndState\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByState\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIState.StateInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"}],\"name\":\"idExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"name\":\"nonces\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"prevState_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"prevGist_\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByState\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structILightweightStateV2.StateData\",\"name\":\"stateData_\",\"type\":\"tuple\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"root\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structILightweightStateV2.GistRootData\",\"name\":\"gistData_\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof_\",\"type\":\"bytes\"}],\"name\":\"signedTransitState\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"signer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sourceStateContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state_\",\"type\":\"uint256\"}],\"name\":\"stateExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation_\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"upgradeToWithSig\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"methodId_\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"contractAddress_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newAddress_\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"validateChangeAddressSignature\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"previousAdmin\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newAdmin\",\"type\":\"address\"}],\"name\":\"AdminChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"beacon\",\"type\":\"address\"}],\"name\":\"BeaconUpgraded\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newGistRoot\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"prevGistRoot\",\"type\":\"uint256\"}],\"name\":\"SignGISTDataTransited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"identityId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newIdentityState\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"prevIdentityState\",\"type\":\"uint256\"}],\"name\":\"SignStateDataTransited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"implementation\",\"type\":\"address\"}],\"name\":\"Upgraded\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"P\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"signer_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"sourceStateContract_\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"chainName_\",\"type\":\"string\"}],\"name\":\"__LightweightStateV2_init\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"signer_\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"chainName_\",\"type\":\"string\"}],\"name\":\"__Signers_init\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"chainName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"newSignerPubKey_\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"changeSigner\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newSourceStateContract_\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"changeSourceStateContract\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"methodId_\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"contractAddress_\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"signHash_\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"checkSignatureAndIncrementNonce\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentGISTRootInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"root\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIState.GistRootInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGISTRoot\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"root_\",\"type\":\"uint256\"}],\"name\":\"getGISTRootInfo\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"root\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIState.GistRootInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"}],\"name\":\"getIdentityLastState\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"methodId_\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"contractAddress_\",\"type\":\"address\"}],\"name\":\"getSigComponents\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"chainName_\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"nonce_\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"}],\"name\":\"getStateInfoById\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByState\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIState.StateInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state_\",\"type\":\"uint256\"}],\"name\":\"getStateInfoByIdAndState\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByState\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structIState.StateInfo\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"}],\"name\":\"idExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"},{\"internalType\":\"uint8\",\"name\":\"\",\"type\":\"uint8\"}],\"name\":\"nonces\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"proxiableUUID\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"prevGist_\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"root\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByRoot\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structILightweightStateV2.GistRootData\",\"name\":\"gistData_\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof_\",\"type\":\"bytes\"}],\"name\":\"signedTransitGISTData\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"prevState_\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"replacedByState\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtTimestamp\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"createdAtBlock\",\"type\":\"uint256\"}],\"internalType\":\"structILightweightStateV2.StateData\",\"name\":\"stateData_\",\"type\":\"tuple\"},{\"internalType\":\"bytes\",\"name\":\"proof_\",\"type\":\"bytes\"}],\"name\":\"signedTransitStateData\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"signer\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"sourceStateContract\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"identityId_\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"state_\",\"type\":\"uint256\"}],\"name\":\"stateExists\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"}],\"name\":\"upgradeTo\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"upgradeToAndCall\",\"outputs\":[],\"stateMutability\":\"payable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newImplementation_\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"upgradeToWithSig\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"methodId_\",\"type\":\"uint8\"},{\"internalType\":\"address\",\"name\":\"contractAddress_\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"newAddress_\",\"type\":\"address\"},{\"internalType\":\"bytes\",\"name\":\"signature_\",\"type\":\"bytes\"}],\"name\":\"validateChangeAddressSignature\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // LightweightStateV2ABI is the input ABI used to generate the binding from.
@@ -802,25 +802,46 @@ func (_LightweightStateV2 *LightweightStateV2TransactorSession) CheckSignatureAn
 	return _LightweightStateV2.Contract.CheckSignatureAndIncrementNonce(&_LightweightStateV2.TransactOpts, methodId_, contractAddress_, signHash_, signature_)
 }
 
-// SignedTransitState is a paid mutator transaction binding the contract method 0x7e1f10c3.
+// SignedTransitGISTData is a paid mutator transaction binding the contract method 0xaaf654c3.
 //
-// Solidity: function signedTransitState(uint256 prevState_, uint256 prevGist_, (uint256,uint256,uint256,uint256,uint256) stateData_, (uint256,uint256,uint256,uint256) gistData_, bytes proof_) returns()
-func (_LightweightStateV2 *LightweightStateV2Transactor) SignedTransitState(opts *bind.TransactOpts, prevState_ *big.Int, prevGist_ *big.Int, stateData_ ILightweightStateV2StateData, gistData_ ILightweightStateV2GistRootData, proof_ []byte) (*types.Transaction, error) {
-	return _LightweightStateV2.contract.Transact(opts, "signedTransitState", prevState_, prevGist_, stateData_, gistData_, proof_)
+// Solidity: function signedTransitGISTData(uint256 prevGist_, (uint256,uint256,uint256,uint256) gistData_, bytes proof_) returns()
+func (_LightweightStateV2 *LightweightStateV2Transactor) SignedTransitGISTData(opts *bind.TransactOpts, prevGist_ *big.Int, gistData_ ILightweightStateV2GistRootData, proof_ []byte) (*types.Transaction, error) {
+	return _LightweightStateV2.contract.Transact(opts, "signedTransitGISTData", prevGist_, gistData_, proof_)
 }
 
-// SignedTransitState is a paid mutator transaction binding the contract method 0x7e1f10c3.
+// SignedTransitGISTData is a paid mutator transaction binding the contract method 0xaaf654c3.
 //
-// Solidity: function signedTransitState(uint256 prevState_, uint256 prevGist_, (uint256,uint256,uint256,uint256,uint256) stateData_, (uint256,uint256,uint256,uint256) gistData_, bytes proof_) returns()
-func (_LightweightStateV2 *LightweightStateV2Session) SignedTransitState(prevState_ *big.Int, prevGist_ *big.Int, stateData_ ILightweightStateV2StateData, gistData_ ILightweightStateV2GistRootData, proof_ []byte) (*types.Transaction, error) {
-	return _LightweightStateV2.Contract.SignedTransitState(&_LightweightStateV2.TransactOpts, prevState_, prevGist_, stateData_, gistData_, proof_)
+// Solidity: function signedTransitGISTData(uint256 prevGist_, (uint256,uint256,uint256,uint256) gistData_, bytes proof_) returns()
+func (_LightweightStateV2 *LightweightStateV2Session) SignedTransitGISTData(prevGist_ *big.Int, gistData_ ILightweightStateV2GistRootData, proof_ []byte) (*types.Transaction, error) {
+	return _LightweightStateV2.Contract.SignedTransitGISTData(&_LightweightStateV2.TransactOpts, prevGist_, gistData_, proof_)
 }
 
-// SignedTransitState is a paid mutator transaction binding the contract method 0x7e1f10c3.
+// SignedTransitGISTData is a paid mutator transaction binding the contract method 0xaaf654c3.
 //
-// Solidity: function signedTransitState(uint256 prevState_, uint256 prevGist_, (uint256,uint256,uint256,uint256,uint256) stateData_, (uint256,uint256,uint256,uint256) gistData_, bytes proof_) returns()
-func (_LightweightStateV2 *LightweightStateV2TransactorSession) SignedTransitState(prevState_ *big.Int, prevGist_ *big.Int, stateData_ ILightweightStateV2StateData, gistData_ ILightweightStateV2GistRootData, proof_ []byte) (*types.Transaction, error) {
-	return _LightweightStateV2.Contract.SignedTransitState(&_LightweightStateV2.TransactOpts, prevState_, prevGist_, stateData_, gistData_, proof_)
+// Solidity: function signedTransitGISTData(uint256 prevGist_, (uint256,uint256,uint256,uint256) gistData_, bytes proof_) returns()
+func (_LightweightStateV2 *LightweightStateV2TransactorSession) SignedTransitGISTData(prevGist_ *big.Int, gistData_ ILightweightStateV2GistRootData, proof_ []byte) (*types.Transaction, error) {
+	return _LightweightStateV2.Contract.SignedTransitGISTData(&_LightweightStateV2.TransactOpts, prevGist_, gistData_, proof_)
+}
+
+// SignedTransitStateData is a paid mutator transaction binding the contract method 0x076599d5.
+//
+// Solidity: function signedTransitStateData(uint256 prevState_, (uint256,uint256,uint256,uint256,uint256) stateData_, bytes proof_) returns()
+func (_LightweightStateV2 *LightweightStateV2Transactor) SignedTransitStateData(opts *bind.TransactOpts, prevState_ *big.Int, stateData_ ILightweightStateV2StateData, proof_ []byte) (*types.Transaction, error) {
+	return _LightweightStateV2.contract.Transact(opts, "signedTransitStateData", prevState_, stateData_, proof_)
+}
+
+// SignedTransitStateData is a paid mutator transaction binding the contract method 0x076599d5.
+//
+// Solidity: function signedTransitStateData(uint256 prevState_, (uint256,uint256,uint256,uint256,uint256) stateData_, bytes proof_) returns()
+func (_LightweightStateV2 *LightweightStateV2Session) SignedTransitStateData(prevState_ *big.Int, stateData_ ILightweightStateV2StateData, proof_ []byte) (*types.Transaction, error) {
+	return _LightweightStateV2.Contract.SignedTransitStateData(&_LightweightStateV2.TransactOpts, prevState_, stateData_, proof_)
+}
+
+// SignedTransitStateData is a paid mutator transaction binding the contract method 0x076599d5.
+//
+// Solidity: function signedTransitStateData(uint256 prevState_, (uint256,uint256,uint256,uint256,uint256) stateData_, bytes proof_) returns()
+func (_LightweightStateV2 *LightweightStateV2TransactorSession) SignedTransitStateData(prevState_ *big.Int, stateData_ ILightweightStateV2StateData, proof_ []byte) (*types.Transaction, error) {
+	return _LightweightStateV2.Contract.SignedTransitStateData(&_LightweightStateV2.TransactOpts, prevState_, stateData_, proof_)
 }
 
 // UpgradeTo is a paid mutator transaction binding the contract method 0x3659cfe6.
@@ -1320,9 +1341,9 @@ func (_LightweightStateV2 *LightweightStateV2Filterer) ParseInitialized(log type
 	return event, nil
 }
 
-// LightweightStateV2SignedStateTransitedIterator is returned from FilterSignedStateTransited and is used to iterate over the raw logs and unpacked data for SignedStateTransited events raised by the LightweightStateV2 contract.
-type LightweightStateV2SignedStateTransitedIterator struct {
-	Event *LightweightStateV2SignedStateTransited // Event containing the contract specifics and raw log
+// LightweightStateV2SignGISTDataTransitedIterator is returned from FilterSignGISTDataTransited and is used to iterate over the raw logs and unpacked data for SignGISTDataTransited events raised by the LightweightStateV2 contract.
+type LightweightStateV2SignGISTDataTransitedIterator struct {
+	Event *LightweightStateV2SignGISTDataTransited // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1336,7 +1357,7 @@ type LightweightStateV2SignedStateTransitedIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *LightweightStateV2SignedStateTransitedIterator) Next() bool {
+func (it *LightweightStateV2SignGISTDataTransitedIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1345,7 +1366,7 @@ func (it *LightweightStateV2SignedStateTransitedIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(LightweightStateV2SignedStateTransited)
+			it.Event = new(LightweightStateV2SignGISTDataTransited)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1360,7 +1381,7 @@ func (it *LightweightStateV2SignedStateTransitedIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(LightweightStateV2SignedStateTransited)
+		it.Event = new(LightweightStateV2SignGISTDataTransited)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1376,45 +1397,42 @@ func (it *LightweightStateV2SignedStateTransitedIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *LightweightStateV2SignedStateTransitedIterator) Error() error {
+func (it *LightweightStateV2SignGISTDataTransitedIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *LightweightStateV2SignedStateTransitedIterator) Close() error {
+func (it *LightweightStateV2SignGISTDataTransitedIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// LightweightStateV2SignedStateTransited represents a SignedStateTransited event raised by the LightweightStateV2 contract.
-type LightweightStateV2SignedStateTransited struct {
-	NewGistRoot       *big.Int
-	IdentityId        *big.Int
-	NewIdentityState  *big.Int
-	PrevIdentityState *big.Int
-	PrevGistRoot      *big.Int
-	Raw               types.Log // Blockchain specific contextual infos
+// LightweightStateV2SignGISTDataTransited represents a SignGISTDataTransited event raised by the LightweightStateV2 contract.
+type LightweightStateV2SignGISTDataTransited struct {
+	NewGistRoot  *big.Int
+	PrevGistRoot *big.Int
+	Raw          types.Log // Blockchain specific contextual infos
 }
 
-// FilterSignedStateTransited is a free log retrieval operation binding the contract event 0x9e85a434675244ef37bc1e932ca2a55a480ba392a9d097b6142791326cf96d61.
+// FilterSignGISTDataTransited is a free log retrieval operation binding the contract event 0x574c96c9afe8b5549451641801bd35b6e08dcebcb22fa1d3a6f48219bce103a9.
 //
-// Solidity: event SignedStateTransited(uint256 newGistRoot, uint256 identityId, uint256 newIdentityState, uint256 prevIdentityState, uint256 prevGistRoot)
-func (_LightweightStateV2 *LightweightStateV2Filterer) FilterSignedStateTransited(opts *bind.FilterOpts) (*LightweightStateV2SignedStateTransitedIterator, error) {
+// Solidity: event SignGISTDataTransited(uint256 newGistRoot, uint256 prevGistRoot)
+func (_LightweightStateV2 *LightweightStateV2Filterer) FilterSignGISTDataTransited(opts *bind.FilterOpts) (*LightweightStateV2SignGISTDataTransitedIterator, error) {
 
-	logs, sub, err := _LightweightStateV2.contract.FilterLogs(opts, "SignedStateTransited")
+	logs, sub, err := _LightweightStateV2.contract.FilterLogs(opts, "SignGISTDataTransited")
 	if err != nil {
 		return nil, err
 	}
-	return &LightweightStateV2SignedStateTransitedIterator{contract: _LightweightStateV2.contract, event: "SignedStateTransited", logs: logs, sub: sub}, nil
+	return &LightweightStateV2SignGISTDataTransitedIterator{contract: _LightweightStateV2.contract, event: "SignGISTDataTransited", logs: logs, sub: sub}, nil
 }
 
-// WatchSignedStateTransited is a free log subscription operation binding the contract event 0x9e85a434675244ef37bc1e932ca2a55a480ba392a9d097b6142791326cf96d61.
+// WatchSignGISTDataTransited is a free log subscription operation binding the contract event 0x574c96c9afe8b5549451641801bd35b6e08dcebcb22fa1d3a6f48219bce103a9.
 //
-// Solidity: event SignedStateTransited(uint256 newGistRoot, uint256 identityId, uint256 newIdentityState, uint256 prevIdentityState, uint256 prevGistRoot)
-func (_LightweightStateV2 *LightweightStateV2Filterer) WatchSignedStateTransited(opts *bind.WatchOpts, sink chan<- *LightweightStateV2SignedStateTransited) (event.Subscription, error) {
+// Solidity: event SignGISTDataTransited(uint256 newGistRoot, uint256 prevGistRoot)
+func (_LightweightStateV2 *LightweightStateV2Filterer) WatchSignGISTDataTransited(opts *bind.WatchOpts, sink chan<- *LightweightStateV2SignGISTDataTransited) (event.Subscription, error) {
 
-	logs, sub, err := _LightweightStateV2.contract.WatchLogs(opts, "SignedStateTransited")
+	logs, sub, err := _LightweightStateV2.contract.WatchLogs(opts, "SignGISTDataTransited")
 	if err != nil {
 		return nil, err
 	}
@@ -1424,8 +1442,8 @@ func (_LightweightStateV2 *LightweightStateV2Filterer) WatchSignedStateTransited
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(LightweightStateV2SignedStateTransited)
-				if err := _LightweightStateV2.contract.UnpackLog(event, "SignedStateTransited", log); err != nil {
+				event := new(LightweightStateV2SignGISTDataTransited)
+				if err := _LightweightStateV2.contract.UnpackLog(event, "SignGISTDataTransited", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1446,12 +1464,148 @@ func (_LightweightStateV2 *LightweightStateV2Filterer) WatchSignedStateTransited
 	}), nil
 }
 
-// ParseSignedStateTransited is a log parse operation binding the contract event 0x9e85a434675244ef37bc1e932ca2a55a480ba392a9d097b6142791326cf96d61.
+// ParseSignGISTDataTransited is a log parse operation binding the contract event 0x574c96c9afe8b5549451641801bd35b6e08dcebcb22fa1d3a6f48219bce103a9.
 //
-// Solidity: event SignedStateTransited(uint256 newGistRoot, uint256 identityId, uint256 newIdentityState, uint256 prevIdentityState, uint256 prevGistRoot)
-func (_LightweightStateV2 *LightweightStateV2Filterer) ParseSignedStateTransited(log types.Log) (*LightweightStateV2SignedStateTransited, error) {
-	event := new(LightweightStateV2SignedStateTransited)
-	if err := _LightweightStateV2.contract.UnpackLog(event, "SignedStateTransited", log); err != nil {
+// Solidity: event SignGISTDataTransited(uint256 newGistRoot, uint256 prevGistRoot)
+func (_LightweightStateV2 *LightweightStateV2Filterer) ParseSignGISTDataTransited(log types.Log) (*LightweightStateV2SignGISTDataTransited, error) {
+	event := new(LightweightStateV2SignGISTDataTransited)
+	if err := _LightweightStateV2.contract.UnpackLog(event, "SignGISTDataTransited", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// LightweightStateV2SignStateDataTransitedIterator is returned from FilterSignStateDataTransited and is used to iterate over the raw logs and unpacked data for SignStateDataTransited events raised by the LightweightStateV2 contract.
+type LightweightStateV2SignStateDataTransitedIterator struct {
+	Event *LightweightStateV2SignStateDataTransited // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LightweightStateV2SignStateDataTransitedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LightweightStateV2SignStateDataTransited)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LightweightStateV2SignStateDataTransited)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LightweightStateV2SignStateDataTransitedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LightweightStateV2SignStateDataTransitedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LightweightStateV2SignStateDataTransited represents a SignStateDataTransited event raised by the LightweightStateV2 contract.
+type LightweightStateV2SignStateDataTransited struct {
+	IdentityId        *big.Int
+	NewIdentityState  *big.Int
+	PrevIdentityState *big.Int
+	Raw               types.Log // Blockchain specific contextual infos
+}
+
+// FilterSignStateDataTransited is a free log retrieval operation binding the contract event 0x54615679a8c54f75531a431a2882c4ff0b716f9f92f486212b2784deec37f2f3.
+//
+// Solidity: event SignStateDataTransited(uint256 identityId, uint256 newIdentityState, uint256 prevIdentityState)
+func (_LightweightStateV2 *LightweightStateV2Filterer) FilterSignStateDataTransited(opts *bind.FilterOpts) (*LightweightStateV2SignStateDataTransitedIterator, error) {
+
+	logs, sub, err := _LightweightStateV2.contract.FilterLogs(opts, "SignStateDataTransited")
+	if err != nil {
+		return nil, err
+	}
+	return &LightweightStateV2SignStateDataTransitedIterator{contract: _LightweightStateV2.contract, event: "SignStateDataTransited", logs: logs, sub: sub}, nil
+}
+
+// WatchSignStateDataTransited is a free log subscription operation binding the contract event 0x54615679a8c54f75531a431a2882c4ff0b716f9f92f486212b2784deec37f2f3.
+//
+// Solidity: event SignStateDataTransited(uint256 identityId, uint256 newIdentityState, uint256 prevIdentityState)
+func (_LightweightStateV2 *LightweightStateV2Filterer) WatchSignStateDataTransited(opts *bind.WatchOpts, sink chan<- *LightweightStateV2SignStateDataTransited) (event.Subscription, error) {
+
+	logs, sub, err := _LightweightStateV2.contract.WatchLogs(opts, "SignStateDataTransited")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LightweightStateV2SignStateDataTransited)
+				if err := _LightweightStateV2.contract.UnpackLog(event, "SignStateDataTransited", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseSignStateDataTransited is a log parse operation binding the contract event 0x54615679a8c54f75531a431a2882c4ff0b716f9f92f486212b2784deec37f2f3.
+//
+// Solidity: event SignStateDataTransited(uint256 identityId, uint256 newIdentityState, uint256 prevIdentityState)
+func (_LightweightStateV2 *LightweightStateV2Filterer) ParseSignStateDataTransited(log types.Log) (*LightweightStateV2SignStateDataTransited, error) {
+	event := new(LightweightStateV2SignStateDataTransited)
+	if err := _LightweightStateV2.contract.UnpackLog(event, "SignStateDataTransited", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
