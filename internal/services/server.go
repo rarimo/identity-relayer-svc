@@ -79,7 +79,7 @@ func (s *ServerImpl) StateRelay(ctx context.Context, req *types.MsgStateRelayReq
 	return &types.MsgRelayResponse{Tx: tx}, nil
 }
 
-func (s *ServerImpl) GISTRelay(ctx context.Context, req *types.MsgGISTRelayRequest) (*types.MsgRelayResponse, error) {
+func (s *ServerImpl) GistRelay(ctx context.Context, req *types.MsgGISTRelayRequest) (*types.MsgRelayResponse, error) {
 	if req.Body == nil {
 		return nil, status.Errorf(codes.InvalidArgument, "empty body")
 	}
