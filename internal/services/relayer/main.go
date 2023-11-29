@@ -4,11 +4,14 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/rarimo/identity-relayer-svc/internal/config"
 	"github.com/rarimo/identity-relayer-svc/internal/core"
 	"github.com/rarimo/identity-relayer-svc/internal/data"
 	"github.com/rarimo/identity-relayer-svc/internal/data/pg"
+	"github.com/rarimo/identity-relayer-svc/internal/utils"
 	"github.com/rarimo/identity-relayer-svc/pkg/polygonid/contracts"
 	rarimocore "github.com/rarimo/rarimo-core/x/rarimocore/types"
 	"gitlab.com/distributed_lab/logan/v3"
@@ -73,7 +76,7 @@ func (c *Service) GistRelays(ctx context.Context, gist string) ([]data.GistTrans
 	return transitions, nil
 }
 
-func (c *Service) StateRelay(ctx context.Context, state string, chainName string) (txhash string, err error) {
+func (c *Service) StateRelay(ctx context.Context, state string, chainName string, waitTxConfirm bool) (txhash string, err error) {
 	chain, ok := c.chains.GetChainByName(chainName)
 	if !ok {
 		return "", ErrChainNotFound
@@ -92,10 +95,10 @@ func (c *Service) StateRelay(ctx context.Context, state string, chainName string
 		return "", err
 	}
 
-	return c.processIdentityStateTransfer(ctx, chain, entry)
+	return c.processIdentityStateTransfer(ctx, chain, entry, waitTxConfirm)
 }
 
-func (c *Service) GistRelay(ctx context.Context, gist string, chainName string) (txhash string, err error) {
+func (c *Service) GistRelay(ctx context.Context, gist string, chainName string, waitTxConfirm bool) (txhash string, err error) {
 	chain, ok := c.chains.GetChainByName(chainName)
 	if !ok {
 		return "", ErrChainNotFound
@@ -114,7 +117,7 @@ func (c *Service) GistRelay(ctx context.Context, gist string, chainName string) 
 		return "", err
 	}
 
-	return c.processIdentityGISTTransfer(ctx, chain, entry)
+	return c.processIdentityGISTTransfer(ctx, chain, entry, waitTxConfirm)
 }
 
 func (c *Service) checkTransitionNotExist(ctx context.Context, state, chain string) error {
@@ -155,7 +158,7 @@ func (c *Service) checkGISTTransitionNotExist(ctx context.Context, state, chain 
 	return nil
 }
 
-func (c *Service) processIdentityStateTransfer(ctx context.Context, chain *config.EVMChain, entry *data.State) (txhash string, err error) {
+func (c *Service) processIdentityStateTransfer(ctx context.Context, chain *config.EVMChain, entry *data.State, waitTxConfirm bool) (txhash string, err error) {
 	opts := chain.TransactorOpts()
 
 	nonce, err := chain.RPC.PendingNonceAt(context.TODO(), chain.SubmitterAddress)
@@ -208,10 +211,14 @@ func (c *Service) processIdentityStateTransfer(ctx context.Context, chain *confi
 		c.log.WithError(err).Error("failed to create transition entry")
 	}
 
+	if waitTxConfirm {
+		c.waitTxConfirmation(ctx, chain, tx)
+	}
+
 	return tx.Hash().Hex(), nil
 }
 
-func (c *Service) processIdentityGISTTransfer(ctx context.Context, chain *config.EVMChain, entry *data.Gist) (txhash string, err error) {
+func (c *Service) processIdentityGISTTransfer(ctx context.Context, chain *config.EVMChain, entry *data.Gist, waitTxConfirm bool) (txhash string, err error) {
 	opts := chain.TransactorOpts()
 
 	nonce, err := chain.RPC.PendingNonceAt(context.TODO(), chain.SubmitterAddress)
@@ -264,7 +271,36 @@ func (c *Service) processIdentityGISTTransfer(ctx context.Context, chain *config
 		c.log.WithError(err).Error("failed to create transition entry")
 	}
 
+	if waitTxConfirm {
+		c.waitTxConfirmation(ctx, chain, tx)
+	}
+
 	return tx.Hash().Hex(), nil
+}
+
+func (c *Service) waitTxConfirmation(ctx context.Context, chain *config.EVMChain, tx *types.Transaction) {
+	receipt, err := bind.WaitMined(ctx, chain.RPC, tx)
+	if err != nil {
+		c.log.WithError(err).Error("failed to wait for state transition tx")
+		return
+	}
+
+	if receipt.Status == 0 {
+		c.log.WithError(err).WithFields(logan.F{
+			"receipt": utils.Prettify(receipt),
+			"chain":   chain.Name,
+		}).Error("failed to wait for state transition tx")
+		return
+	}
+
+	c.log.
+		WithFields(logan.F{
+			"tx_id":        tx.Hash(),
+			"tx_index":     receipt.TransactionIndex,
+			"block_number": receipt.BlockNumber,
+			"gas_used":     receipt.GasUsed,
+		}).
+		Info("evm transaction confirmed")
 }
 
 func getStateInfo(transfer *rarimocore.IdentityStateTransfer) (state contracts.ILightweightStateV2StateData, err error) {

@@ -127,7 +127,8 @@ volumes:
 ```json
 {
   "chain": "The name of chain submit to according to the service configuration",
-  "hash": "The state hash (the same as on state contract) in 0x... hex format"
+  "hash": "The state hash (the same as on state contract) in 0x... hex format",
+  "waitConfirm": true
 }
 ```
 
@@ -136,9 +137,13 @@ volumes:
 ```json
 {
   "chain": "The name of chain submit to according to the service configuration",
-  "hash": "The GIST hash (the same as on state contract) in 0x... hex format"
+  "hash": "The GIST hash (the same as on state contract) in 0x... hex format",
+  "waitConfirm": true
 }
 ```
+
+`"waitConfirm": true` - indicates if request should wait until transaction will be included into the block.
+Default - `false`.
 
 The response will be:
 

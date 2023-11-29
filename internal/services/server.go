@@ -57,7 +57,7 @@ func (s *ServerImpl) StateRelay(ctx context.Context, req *types.MsgStateRelayReq
 
 	s.log.Debugf("Relay request: State - %s; chain - %s", req.Body.Hash, req.Body.Chain)
 
-	tx, err := s.relayer.StateRelay(ctx, req.Body.Hash, req.Body.Chain)
+	tx, err := s.relayer.StateRelay(ctx, req.Body.Hash, req.Body.Chain, req.Body.WaitConfirm)
 
 	if err != nil {
 		s.log.WithError(err).Debugf("Request failed")
@@ -86,7 +86,7 @@ func (s *ServerImpl) GistRelay(ctx context.Context, req *types.MsgGISTRelayReque
 
 	s.log.Infof("Relay request: GIST - %s; chain - %s", req.Body.Hash, req.Body.Chain)
 
-	tx, err := s.relayer.GistRelay(ctx, req.Body.Hash, req.Body.Chain)
+	tx, err := s.relayer.GistRelay(ctx, req.Body.Hash, req.Body.Chain, req.Body.WaitConfirm)
 
 	if err != nil {
 		s.log.WithError(err).Debugf("Request failed")

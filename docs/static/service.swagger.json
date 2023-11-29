@@ -170,6 +170,9 @@
         },
         "chain": {
           "type": "string"
+        },
+        "waitConfirm": {
+          "type": "boolean"
         }
       }
     },

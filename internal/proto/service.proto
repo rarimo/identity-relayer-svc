@@ -44,6 +44,7 @@ message MsgGISTRelayRequest {
 message RelayBody {
   string hash = 1;
   string chain = 2;
+  bool waitConfirm = 3;
 }
 
 message MsgRelayResponse {
