@@ -63,7 +63,7 @@ func (s *stateIngester) catchup(ctx context.Context) error {
 		}
 
 		for _, op := range operations.Operation {
-			if op.Status == rarimocore.OpStatus_SIGNED && op.OperationType == rarimocore.OpType_IDENTITY_DEFAULT_TRANSFER {
+			if op.Status == rarimocore.OpStatus_SIGNED && op.OperationType == rarimocore.OpType_IDENTITY_STATE_TRANSFER {
 				if err := s.trySave(ctx, op); err != nil {
 					return err
 				}
