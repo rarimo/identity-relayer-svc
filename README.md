@@ -59,6 +59,7 @@ core:
 
 cosmos:
   addr: validator:9090
+  enable_tls: false
 
 evm:
   chains:
