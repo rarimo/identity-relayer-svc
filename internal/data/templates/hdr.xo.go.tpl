@@ -26,7 +26,7 @@ import (
 	"gitlab.com/rarimo/tss/tss-svc/internal/data"
 {{- if driver "postgres" }}
 	"github.com/lib/pq/hstore"
-	"gitlab.com/rarimo/xo/types/xo"
+	"github.com/rarimo/xo/types/xo"
 {{ end }}{{ range imports }}
 	{{ . }}
 {{ end }}

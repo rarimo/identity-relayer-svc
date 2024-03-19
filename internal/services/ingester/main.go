@@ -16,6 +16,9 @@ import (
 const (
 	stateQuery = "tm.event='Tx' AND operation_signed.operation_type='IDENTITY_STATE_TRANSFER'"
 	gistQuery  = "tm.event='Tx' AND operation_signed.operation_type='IDENTITY_GIST_TRANSFER'"
+
+	// Iden3 Issuer
+	aggregatedQuery = "tm.event='Tx' AND operation_signed.operation_type='IDENTITY_AGGREGATED_TRANSFER'"
 )
 
 type Service struct {

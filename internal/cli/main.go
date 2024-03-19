@@ -47,6 +47,7 @@ func Run(args []string) bool {
 	case runAllCmd.FullCommand():
 		go ingester.NewService(cfg, ingester.NewStateIngester(cfg)).Run(ctx)
 		go ingester.NewService(cfg, ingester.NewGistIngester(cfg)).Run(ctx)
+		go ingester.NewService(cfg, ingester.NewAggregatedIngester(cfg)).Run(ctx)
 		err = services.NewServer(cfg).Run()
 	case migrateUpCmd.FullCommand():
 		err = MigrateUp(cfg)
