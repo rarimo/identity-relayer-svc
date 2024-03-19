@@ -2,6 +2,7 @@ package relayer
 
 import (
 	"context"
+	"encoding/hex"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -121,8 +122,25 @@ func (c *Service) GistRelay(ctx context.Context, gist string, chainName string, 
 }
 
 func (c *Service) AggregatedRelay(ctx context.Context, gist, stateHash, chainName string, waitTxConfirm bool) (txhash string, err error) {
-	// TODO
-	return "", errors.New("not implemented")
+	chain, ok := c.chains.GetChainByName(chainName)
+	if !ok {
+		return "", ErrChainNotFound
+	}
+
+	entry, err := c.storage.AggregatedQ().AggregatedByGistStateRootCtx(ctx, gist, stateHash, false)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get entry by gist and state root")
+	}
+
+	if entry == nil {
+		return "", ErrEntryNotFound
+	}
+
+	if err := c.checkAggregatedTransitionNotExist(ctx, gist, stateHash, chainName); err != nil {
+		return "", err
+	}
+
+	return c.processIdentityAggregatedTransfer(ctx, chain, entry, waitTxConfirm)
 }
 
 func (c *Service) checkTransitionNotExist(ctx context.Context, state, chain string) error {
@@ -146,6 +164,25 @@ func (c *Service) checkTransitionNotExist(ctx context.Context, state, chain stri
 
 func (c *Service) checkGISTTransitionNotExist(ctx context.Context, state, chain string) error {
 	transitions, err := c.storage.GistTransitionQ().GistTransitionsByGistCtx(ctx, state, false)
+	if err != nil {
+		return errors.Wrap(err, "failed to get transition")
+	}
+
+	if len(transitions) == 0 {
+		return nil
+	}
+
+	for _, transition := range transitions {
+		if transition.Chain == chain {
+			return ErrAlreadySubmitted
+		}
+	}
+
+	return nil
+}
+
+func (c *Service) checkAggregatedTransitionNotExist(ctx context.Context, gist, state, chain string) error {
+	transitions, err := c.storage.AggregatedTransitionQ().AggregatedTransitionsByGistStateRootCtx(ctx, gist, state, false)
 	if err != nil {
 		return errors.Wrap(err, "failed to get transition")
 	}
@@ -283,6 +320,72 @@ func (c *Service) processIdentityGISTTransfer(ctx context.Context, chain *config
 	return tx.Hash().Hex(), nil
 }
 
+func (c *Service) processIdentityAggregatedTransfer(ctx context.Context, chain *config.EVMChain, entry *data.Aggregated, waitTxConfirm bool) (txhash string, err error) {
+	opts := chain.TransactorOpts()
+
+	nonce, err := chain.RPC.PendingNonceAt(context.TODO(), chain.SubmitterAddress)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to fetch a nonce")
+	}
+
+	opts.Nonce = big.NewInt(int64(nonce))
+
+	opts.GasPrice, err = chain.RPC.SuggestGasPrice(ctx)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get suggested gas price")
+	}
+
+	details, err := c.core.GetIdentityAggregatedTransferProof(ctx, entry.Operation)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get operation proof details")
+	}
+
+	aggregatedInfo, err := getAggregatedInfo(details.Operation)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get gist info from transfer")
+	}
+
+	contract, err := contracts.NewLightweightStateV3(chain.ContractAddress, chain.RPC)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to init new lightweight state contract")
+	}
+
+	newIdentityState := [32]byte{}
+	stateRoot, err := hex.DecodeString(entry.StateRoot[2:])
+	if err != nil {
+		return "", errors.Wrap(err, "failed to convert hex to bytes")
+	}
+	copy(newIdentityState[:], stateRoot)
+
+	tx, err := contract.SignedTransitState(opts, newIdentityState, aggregatedInfo, details.Proof)
+	if err != nil {
+		c.log.Debugf(
+			"Tx args: %s, %v, %s",
+			string(newIdentityState[:]),
+			aggregatedInfo,
+			hexutil.Encode(details.Proof),
+		)
+		return "", errors.Wrap(err, "failed to send gist transition tx")
+	}
+
+	transition := data.AggregatedTransition{
+		Tx:        tx.Hash().String(),
+		Gist:      entry.Gist,
+		StateRoot: entry.StateRoot,
+		Chain:     chain.Name,
+	}
+
+	if err := c.storage.AggregatedTransitionQ().InsertCtx(ctx, &transition); err != nil {
+		c.log.WithError(err).Error("failed to create transition entry")
+	}
+
+	if waitTxConfirm {
+		c.waitTxConfirmation(ctx, chain, tx)
+	}
+
+	return tx.Hash().Hex(), nil
+}
+
 func (c *Service) waitTxConfirmation(ctx context.Context, chain *config.EVMChain, tx *types.Transaction) {
 	receipt, err := bind.WaitMined(ctx, chain.RPC, tx)
 	if err != nil {
@@ -345,5 +448,13 @@ func getGistRootInfo(transfer *rarimocore.IdentityGISTTransfer) (gistRoot contra
 
 	// Will not be used in proof
 	gistRoot.ReplacedByRoot = big.NewInt(0)
+	return
+}
+
+func getAggregatedInfo(transfer *rarimocore.IdentityAggregatedTransfer) (gistRoot contracts.ILightweightStateGistRootData, err error) {
+	gistRoot.Root = new(big.Int).SetBytes(hexutil.MustDecode(transfer.GISTHash))
+
+	gistRoot.CreatedAtTimestamp = big.NewInt(0).SetUint64(transfer.Timestamp)
+
 	return
 }
