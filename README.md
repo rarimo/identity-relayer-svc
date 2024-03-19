@@ -143,6 +143,17 @@ volumes:
 }
 ```
 
+3. Execute the POST `/integrations/relayer/aggregated/relay` request with the following body to perform Iden3 issuer state publishing:
+
+```json
+{
+  "chain": "The name of chain submit to according to the service configuration",
+  "gist_hash": "The GIST hash (the same as on state contract) in 0x... hex format",
+  "state_hash": "The state hash (the same as on state contract) in 0x... hex format",
+  "waitConfirm": true
+}
+```
+
 `"waitConfirm": true` - indicates if request should wait until transaction will be included into the block.
 Default - `false`.
 

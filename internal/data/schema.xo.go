@@ -59,7 +59,25 @@ func (ss StringSlice) Value() (driver.Value, error) {
 		v[i] = `"` + strings.Replace(strings.Replace(s, `\`, `\\\`, -1), `"`, `\"`, -1) + `"`
 	}
 	return "{" + strings.Join(v, ",") + "}", nil
-} // Gist represents a row from 'public.gists'.
+} // Aggregated represents a row from 'public.aggregateds'.
+type Aggregated struct {
+	Gist         string `db:"gist"`         // gist
+	StateRoot    string `db:"state_root"`   // state_root
+	Operation    string `db:"operation"`    // operation
+	Confirmation string `db:"confirmation"` // confirmation
+
+}
+
+// AggregatedTransition represents a row from 'public.aggregated_transitions'.
+type AggregatedTransition struct {
+	Tx        string `db:"tx"`         // tx
+	Gist      string `db:"gist"`       // gist
+	StateRoot string `db:"state_root"` // state_root
+	Chain     string `db:"chain"`      // chain
+
+}
+
+// Gist represents a row from 'public.gists'.
 type Gist struct {
 	ID           string `db:"id"`           // id
 	Operation    string `db:"operation"`    // operation

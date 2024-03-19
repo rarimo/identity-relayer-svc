@@ -108,3 +108,37 @@ func (c *Core) GetIdentityGISTTransferProof(ctx context.Context, operationID str
 
 	return &result, nil
 }
+
+func (c *Core) GetIdentityAggregatedTransferProof(ctx context.Context, operationID string) (*IdentityAggregatedTransferDetails, error) {
+	proof, err := c.core.OperationProof(ctx, &rarimocore.QueryGetOperationProofRequest{Index: operationID})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get the operation proof")
+	}
+
+	pathHashes := make([]common.Hash, 0, len(proof.Path))
+	for _, p := range proof.Path {
+		pathHashes = append(pathHashes, common.HexToHash(p))
+	}
+
+	signature := hexutil.MustDecode(proof.Signature)
+	signature[64] += 27
+
+	operation, err := c.core.Operation(context.Background(), &rarimocore.QueryGetOperationRequest{Index: operationID})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get the operation")
+	}
+
+	transfer, err := pkg.GetIdentityAggregatedTransfer(operation.Operation)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse operation details")
+	}
+
+	result := IdentityAggregatedTransferDetails{Operation: transfer}
+
+	result.Proof, err = proofArgs.Pack(pathHashes, signature)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to encode the proof")
+	}
+
+	return &result, nil
+}

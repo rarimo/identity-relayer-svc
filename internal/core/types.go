@@ -11,3 +11,8 @@ type IdentityGISTTransferDetails struct {
 	Operation *rarimocore.IdentityGISTTransfer
 	Proof     []byte
 }
+
+type IdentityAggregatedTransferDetails struct {
+	Operation *rarimocore.IdentityAggregatedTransfer
+	Proof     []byte
+}

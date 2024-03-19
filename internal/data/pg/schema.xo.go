@@ -37,6 +37,188 @@ func (s *Storage) Clone() *Storage {
 // Transaction begins a transaction on repo.
 func (s *Storage) Transaction(tx func() error) error {
 	return s.db.Transaction(tx)
+} // AggregatedQ represents helper struct to access row of 'aggregateds'.
+type AggregatedQ struct {
+	db *pgdb.DB
+}
+
+// NewAggregatedQ  - creates new instance
+func NewAggregatedQ(db *pgdb.DB) *AggregatedQ {
+	return &AggregatedQ{
+		db,
+	}
+}
+
+// AggregatedQ  - creates new instance of AggregatedQ
+func (s Storage) AggregatedQ() *AggregatedQ {
+	return NewAggregatedQ(s.DB())
+}
+
+var colsAggregated = `gist, state_root, operation, confirmation`
+
+// InsertCtx inserts a Aggregated to the database.
+func (q AggregatedQ) InsertCtx(ctx context.Context, a *data.Aggregated) error {
+	// sql insert query, primary key must be provided
+	sqlstr := `INSERT INTO public.aggregateds (` +
+		`gist, state_root, operation, confirmation` +
+		`) VALUES (` +
+		`$1, $2, $3, $4` +
+		`)`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, a.Gist, a.StateRoot, a.Operation, a.Confirmation)
+	return errors.Wrap(err, "failed to execute insert query")
+}
+
+// Insert insert a Aggregated to the database.
+func (q AggregatedQ) Insert(a *data.Aggregated) error {
+	return q.InsertCtx(context.Background(), a)
+}
+
+// UpdateCtx updates a Aggregated in the database.
+func (q AggregatedQ) UpdateCtx(ctx context.Context, a *data.Aggregated) error {
+	// update with composite primary key
+	sqlstr := `UPDATE public.aggregateds SET ` +
+		`operation = $1, confirmation = $2 ` +
+		`WHERE gist = $3 AND state_root = $4`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, a.Operation, a.Confirmation, a.Gist, a.StateRoot)
+	return errors.Wrap(err, "failed to execute update")
+}
+
+// Update updates a Aggregated in the database.
+func (q AggregatedQ) Update(a *data.Aggregated) error {
+	return q.UpdateCtx(context.Background(), a)
+}
+
+// UpsertCtx performs an upsert for Aggregated.
+func (q AggregatedQ) UpsertCtx(ctx context.Context, a *data.Aggregated) error {
+	// upsert
+	sqlstr := `INSERT INTO public.aggregateds (` +
+		`gist, state_root, operation, confirmation` +
+		`) VALUES (` +
+		`$1, $2, $3, $4` +
+		`)` +
+		` ON CONFLICT (gist, state_root) DO ` +
+		`UPDATE SET ` +
+		`operation = EXCLUDED.operation, confirmation = EXCLUDED.confirmation `
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, a.Gist, a.StateRoot, a.Operation, a.Confirmation); err != nil {
+		return errors.Wrap(err, "failed to execute upsert stmt")
+	}
+	return nil
+}
+
+// Upsert performs an upsert for Aggregated.
+func (q AggregatedQ) Upsert(a *data.Aggregated) error {
+	return q.UpsertCtx(context.Background(), a)
+}
+
+// DeleteCtx deletes the Aggregated from the database.
+func (q AggregatedQ) DeleteCtx(ctx context.Context, a *data.Aggregated) error {
+	// delete with composite primary key
+	sqlstr := `DELETE FROM public.aggregateds ` +
+		`WHERE gist = $1 AND state_root = $2`
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, a.Gist, a.StateRoot); err != nil {
+		return errors.Wrap(err, "failed to exec delete stmt")
+	}
+	return nil
+}
+
+// Delete deletes the Aggregated from the database.
+func (q AggregatedQ) Delete(a *data.Aggregated) error {
+	return q.DeleteCtx(context.Background(), a)
+} // AggregatedTransitionQ represents helper struct to access row of 'aggregated_transitions'.
+type AggregatedTransitionQ struct {
+	db *pgdb.DB
+}
+
+// NewAggregatedTransitionQ  - creates new instance
+func NewAggregatedTransitionQ(db *pgdb.DB) *AggregatedTransitionQ {
+	return &AggregatedTransitionQ{
+		db,
+	}
+}
+
+// AggregatedTransitionQ  - creates new instance of AggregatedTransitionQ
+func (s Storage) AggregatedTransitionQ() *AggregatedTransitionQ {
+	return NewAggregatedTransitionQ(s.DB())
+}
+
+var colsAggregatedTransition = `tx, gist, state_root, chain`
+
+// InsertCtx inserts a AggregatedTransition to the database.
+func (q AggregatedTransitionQ) InsertCtx(ctx context.Context, at *data.AggregatedTransition) error {
+	// sql insert query, primary key must be provided
+	sqlstr := `INSERT INTO public.aggregated_transitions (` +
+		`tx, gist, state_root, chain` +
+		`) VALUES (` +
+		`$1, $2, $3, $4` +
+		`)`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, at.Tx, at.Gist, at.StateRoot, at.Chain)
+	return errors.Wrap(err, "failed to execute insert query")
+}
+
+// Insert insert a AggregatedTransition to the database.
+func (q AggregatedTransitionQ) Insert(at *data.AggregatedTransition) error {
+	return q.InsertCtx(context.Background(), at)
+}
+
+// UpdateCtx updates a AggregatedTransition in the database.
+func (q AggregatedTransitionQ) UpdateCtx(ctx context.Context, at *data.AggregatedTransition) error {
+	// update with composite primary key
+	sqlstr := `UPDATE public.aggregated_transitions SET ` +
+		`gist = $1, state_root = $2, chain = $3 ` +
+		`WHERE tx = $4`
+	// run
+	err := q.db.ExecRawContext(ctx, sqlstr, at.Gist, at.StateRoot, at.Chain, at.Tx)
+	return errors.Wrap(err, "failed to execute update")
+}
+
+// Update updates a AggregatedTransition in the database.
+func (q AggregatedTransitionQ) Update(at *data.AggregatedTransition) error {
+	return q.UpdateCtx(context.Background(), at)
+}
+
+// UpsertCtx performs an upsert for AggregatedTransition.
+func (q AggregatedTransitionQ) UpsertCtx(ctx context.Context, at *data.AggregatedTransition) error {
+	// upsert
+	sqlstr := `INSERT INTO public.aggregated_transitions (` +
+		`tx, gist, state_root, chain` +
+		`) VALUES (` +
+		`$1, $2, $3, $4` +
+		`)` +
+		` ON CONFLICT (tx) DO ` +
+		`UPDATE SET ` +
+		`gist = EXCLUDED.gist, state_root = EXCLUDED.state_root, chain = EXCLUDED.chain `
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, at.Tx, at.Gist, at.StateRoot, at.Chain); err != nil {
+		return errors.Wrap(err, "failed to execute upsert stmt")
+	}
+	return nil
+}
+
+// Upsert performs an upsert for AggregatedTransition.
+func (q AggregatedTransitionQ) Upsert(at *data.AggregatedTransition) error {
+	return q.UpsertCtx(context.Background(), at)
+}
+
+// DeleteCtx deletes the AggregatedTransition from the database.
+func (q AggregatedTransitionQ) DeleteCtx(ctx context.Context, at *data.AggregatedTransition) error {
+	// delete with single primary key
+	sqlstr := `DELETE FROM public.aggregated_transitions ` +
+		`WHERE tx = $1`
+	// run
+	if err := q.db.ExecRawContext(ctx, sqlstr, at.Tx); err != nil {
+		return errors.Wrap(err, "failed to exec delete stmt")
+	}
+	return nil
+}
+
+// Delete deletes the AggregatedTransition from the database.
+func (q AggregatedTransitionQ) Delete(at *data.AggregatedTransition) error {
+	return q.DeleteCtx(context.Background(), at)
 } // GistQ represents helper struct to access row of 'gists'.
 type GistQ struct {
 	db *pgdb.DB
@@ -492,6 +674,200 @@ func (q TransitionQ) DeleteCtx(ctx context.Context, t *data.Transition) error {
 // Delete deletes the Transition from the database.
 func (q TransitionQ) Delete(t *data.Transition) error {
 	return q.DeleteCtx(context.Background(), t)
+}
+
+// AggregatedByGistCtx retrieves a row from 'public.aggregateds' as a Aggregated.
+//
+// Generated from index 'aggregateds_gist_key'.
+func (q AggregatedQ) AggregatedByGistCtx(ctx context.Context, gist string, isForUpdate bool) (*data.Aggregated, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`gist, state_root, operation, confirmation ` +
+		`FROM public.aggregateds ` +
+		`WHERE gist = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.Aggregated
+	err := q.db.GetRawContext(ctx, &res, sqlstr, gist)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// AggregatedByGist retrieves a row from 'public.aggregateds' as a Aggregated.
+//
+// Generated from index 'aggregateds_gist_key'.
+func (q AggregatedQ) AggregatedByGist(gist string, isForUpdate bool) (*data.Aggregated, error) {
+	return q.AggregatedByGistCtx(context.Background(), gist, isForUpdate)
+}
+
+// AggregatedByOperationCtx retrieves a row from 'public.aggregateds' as a Aggregated.
+//
+// Generated from index 'aggregateds_operation_key'.
+func (q AggregatedQ) AggregatedByOperationCtx(ctx context.Context, operation string, isForUpdate bool) (*data.Aggregated, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`gist, state_root, operation, confirmation ` +
+		`FROM public.aggregateds ` +
+		`WHERE operation = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.Aggregated
+	err := q.db.GetRawContext(ctx, &res, sqlstr, operation)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// AggregatedByOperation retrieves a row from 'public.aggregateds' as a Aggregated.
+//
+// Generated from index 'aggregateds_operation_key'.
+func (q AggregatedQ) AggregatedByOperation(operation string, isForUpdate bool) (*data.Aggregated, error) {
+	return q.AggregatedByOperationCtx(context.Background(), operation, isForUpdate)
+}
+
+// AggregatedByGistStateRootCtx retrieves a row from 'public.aggregateds' as a Aggregated.
+//
+// Generated from index 'aggregateds_pkey'.
+func (q AggregatedQ) AggregatedByGistStateRootCtx(ctx context.Context, gist, stateRoot string, isForUpdate bool) (*data.Aggregated, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`gist, state_root, operation, confirmation ` +
+		`FROM public.aggregateds ` +
+		`WHERE gist = $1 AND state_root = $2`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.Aggregated
+	err := q.db.GetRawContext(ctx, &res, sqlstr, gist, stateRoot)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// AggregatedByGistStateRoot retrieves a row from 'public.aggregateds' as a Aggregated.
+//
+// Generated from index 'aggregateds_pkey'.
+func (q AggregatedQ) AggregatedByGistStateRoot(gist, stateRoot string, isForUpdate bool) (*data.Aggregated, error) {
+	return q.AggregatedByGistStateRootCtx(context.Background(), gist, stateRoot, isForUpdate)
+}
+
+// AggregatedByStateRootCtx retrieves a row from 'public.aggregateds' as a Aggregated.
+//
+// Generated from index 'aggregateds_state_root_key'.
+func (q AggregatedQ) AggregatedByStateRootCtx(ctx context.Context, stateRoot string, isForUpdate bool) (*data.Aggregated, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`gist, state_root, operation, confirmation ` +
+		`FROM public.aggregateds ` +
+		`WHERE state_root = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.Aggregated
+	err := q.db.GetRawContext(ctx, &res, sqlstr, stateRoot)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// AggregatedByStateRoot retrieves a row from 'public.aggregateds' as a Aggregated.
+//
+// Generated from index 'aggregateds_state_root_key'.
+func (q AggregatedQ) AggregatedByStateRoot(stateRoot string, isForUpdate bool) (*data.Aggregated, error) {
+	return q.AggregatedByStateRootCtx(context.Background(), stateRoot, isForUpdate)
+}
+
+// AggregatedTransitionsByGistStateRootCtx retrieves a row from 'public.aggregated_transitions' as a AggregatedTransition.
+//
+// Generated from index 'aggregated_transitions_index'.
+func (q AggregatedTransitionQ) AggregatedTransitionsByGistStateRootCtx(ctx context.Context, gist, stateRoot string, isForUpdate bool) ([]data.AggregatedTransition, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`tx, gist, state_root, chain ` +
+		`FROM public.aggregated_transitions ` +
+		`WHERE gist = $1 AND state_root = $2`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res []data.AggregatedTransition
+	err := q.db.SelectRawContext(ctx, &res, sqlstr, gist, stateRoot)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return res, nil
+}
+
+// AggregatedTransitionsByGistStateRoot retrieves a row from 'public.aggregated_transitions' as a AggregatedTransition.
+//
+// Generated from index 'aggregated_transitions_index'.
+func (q AggregatedTransitionQ) AggregatedTransitionsByGistStateRoot(gist, stateRoot string, isForUpdate bool) ([]data.AggregatedTransition, error) {
+	return q.AggregatedTransitionsByGistStateRootCtx(context.Background(), gist, stateRoot, isForUpdate)
+}
+
+// AggregatedTransitionByTxCtx retrieves a row from 'public.aggregated_transitions' as a AggregatedTransition.
+//
+// Generated from index 'aggregated_transitions_pkey'.
+func (q AggregatedTransitionQ) AggregatedTransitionByTxCtx(ctx context.Context, tx string, isForUpdate bool) (*data.AggregatedTransition, error) {
+	// query
+	sqlstr := `SELECT ` +
+		`tx, gist, state_root, chain ` +
+		`FROM public.aggregated_transitions ` +
+		`WHERE tx = $1`
+	// run
+	if isForUpdate {
+		sqlstr += " for update"
+	}
+	var res data.AggregatedTransition
+	err := q.db.GetRawContext(ctx, &res, sqlstr, tx)
+	if err != nil {
+		if errors.Cause(err) == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, errors.Wrap(err, "failed to exec select")
+	}
+
+	return &res, nil
+}
+
+// AggregatedTransitionByTx retrieves a row from 'public.aggregated_transitions' as a AggregatedTransition.
+//
+// Generated from index 'aggregated_transitions_pkey'.
+func (q AggregatedTransitionQ) AggregatedTransitionByTx(tx string, isForUpdate bool) (*data.AggregatedTransition, error) {
+	return q.AggregatedTransitionByTxCtx(context.Background(), tx, isForUpdate)
 }
 
 // GistByOperationCtx retrieves a row from 'public.gists' as a Gist.

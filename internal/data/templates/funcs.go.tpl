@@ -9,11 +9,11 @@ import (
 	"regexp"
 	"strings"
 	"text/template"
-	"gitlab.com/rarimo/xo/loader"
+	"github.com/rarimo/xo/loader"
 
 	"github.com/kenshaw/snaker"
-	"gitlab.com/rarimo/xo/templates/gotpl"
-	xo "gitlab.com/rarimo/xo/types"
+	"github.com/rarimo/xo/templates/gotpl"
+	xo "github.com/rarimo/xo/types"
 )
 
 // Init intializes the custom template funcs.

@@ -20,6 +20,13 @@ service Service {
     };
   };
 
+  rpc AggregatedRelay(MsgAggregatedRelayRequest) returns (MsgRelayResponse){
+    option (google.api.http) = {
+      post: "/integrations/relayer/aggregated/relay"
+      body: "body"
+    };
+  };
+
   rpc StateRelays(MsgRelaysRequest) returns (MsgRelaysResponse){
     option (google.api.http) = {
       get: "/integrations/relayer/state/relay/{hash}"
@@ -41,10 +48,21 @@ message MsgGISTRelayRequest {
   RelayBody body = 1;
 }
 
+message MsgAggregatedRelayRequest {
+  AggregatedRelayBody body = 1;
+}
+
 message RelayBody {
   string hash = 1;
   string chain = 2;
   bool waitConfirm = 3;
+}
+
+message AggregatedRelayBody {
+  string gist_hash = 1;
+  string state_hash = 2;
+  string chain = 3;
+  bool waitConfirm = 4;
 }
 
 message MsgRelayResponse {
