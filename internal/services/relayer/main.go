@@ -120,6 +120,11 @@ func (c *Service) GistRelay(ctx context.Context, gist string, chainName string, 
 	return c.processIdentityGISTTransfer(ctx, chain, entry, waitTxConfirm)
 }
 
+func (c *Service) AggregatedRelay(ctx context.Context, gist, stateHash, chainName string, waitTxConfirm bool) (txhash string, err error) {
+	// TODO
+	return "", errors.New("not implemented")
+}
+
 func (c *Service) checkTransitionNotExist(ctx context.Context, state, chain string) error {
 	transitions, err := c.storage.TransitionQ().TransitionsByStateCtx(ctx, state, false)
 	if err != nil {

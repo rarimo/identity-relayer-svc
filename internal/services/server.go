@@ -108,6 +108,35 @@ func (s *ServerImpl) GistRelay(ctx context.Context, req *types.MsgGISTRelayReque
 	return &types.MsgRelayResponse{Tx: tx}, nil
 }
 
+func (s *ServerImpl) AggregatedRelay(ctx context.Context, req *types.MsgAggregatedRelayRequest) (*types.MsgRelayResponse, error) {
+	if req.Body == nil {
+		return nil, status.Errorf(codes.InvalidArgument, "empty body")
+	}
+
+	s.log.Infof("Relay request: GIST - %s; state hash - %s; chain - %s", req.Body.GistHash, req.Body.StateHash, req.Body.Chain)
+
+	tx, err := s.relayer.AggregatedRelay(ctx, req.Body.GistHash, req.Body.StateHash, req.Body.Chain, req.Body.WaitConfirm)
+
+	if err != nil {
+		s.log.WithError(err).Debugf("Request failed")
+
+		switch errors.Cause(err) {
+		case relayer.ErrEntryNotFound, relayer.ErrChainNotFound:
+			return nil, status.Errorf(codes.NotFound, err.Error())
+		case relayer.ErrAlreadySubmitted:
+			return nil, status.Errorf(
+				codes.InvalidArgument,
+				"can not resubmit state transition tx for GIST %s and state %s on chain: %s", req.Body.GistHash, req.Body.StateHash, req.Body.Chain,
+			)
+		default:
+			s.log.WithError(err).Error("Got internal error while processing relay request")
+			return nil, status.Errorf(codes.Internal, "Internal error")
+		}
+	}
+
+	return &types.MsgRelayResponse{Tx: tx}, nil
+}
+
 func (s *ServerImpl) StateRelays(ctx context.Context, req *types.MsgRelaysRequest) (*types.MsgRelaysResponse, error) {
 	relays, err := s.relayer.StateRelays(ctx, req.Hash)
 	if err != nil {
